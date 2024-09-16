@@ -144,54 +144,10 @@ func LoadResources() (map[string]Frames, error) {
 		Frames: []image.Image{images["floor_8.png"]},
 		Config: cfgs["floor_8.png"],
 	}
+	sprites["floor_ladder"] = Frames{
+		Frames: []image.Image{images["floor_ladder.png"]},
+		Config: cfgs["floor_ladder.png"],
+	}
 
 	return sprites, nil
-}
-
-func LoadLobby() [][]string {
-	a := "floor_1"
-	d := "floor_4"
-	level := [][]string{
-		{d, d, d, d, d},
-		{d, a, a, a, d},
-		{d, a, a, a, d},
-		{d, a, a, a, d},
-		{d, d, d, d, d},
-	}
-
-	return level
-}
-
-func LoadLevel() [][]string {
-	a := "floor_1"
-	b := "floor_2"
-	c := "floor_3"
-	d := "floor_4"
-	e := "floor_5"
-
-	level := [][]string{
-		{d, d, d, d, d, b, d, a, a, a, a, a, a, a, a, a, a, a, a, a, a},
-		{a, a, b, a, a, b, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a},
-		{a, a, a, a, a, b, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a},
-		{a, a, a, a, a, b, a, a, a, a, a, a, a, a, a, a, a, c, a, a, a},
-		{a, a, a, a, a, b, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a},
-		{a, a, a, a, a, b, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a},
-		{a, a, a, a, a, b, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a},
-		{a, a, a, a, a, b, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a},
-		{a, a, a, a, a, a, a, a, a, a, e, e, e, e, e, a, a, a, a, a, a},
-		{a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a},
-		{a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a},
-		{a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a},
-		{a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a},
-		{a, a, a, a, a, a, c, a, a, a, a, a, a, a, a, a, a, a, a, a, a},
-		{a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a},
-		{a, a, a, a, a, a, a, a, a, a, a, a, a, d, a, a, a, a, a, a, a},
-		{a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a},
-		{a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a},
-		{a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a},
-		{a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a},
-		{a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a},
-	}
-
-	return level
 }

@@ -1,6 +1,8 @@
 package game
 
 import (
+	"github.com/bestxp/brpg/internal/level"
+	"github.com/bestxp/brpg/internal/level/levels"
 	"log"
 	"math/rand"
 	"time"
@@ -17,6 +19,10 @@ type World struct {
 	MyID    string
 }
 
+func (world *World) Me() *pkg.Unit {
+	return world.Units[world.MyID]
+}
+
 func (world *World) AddPlayer() string {
 	skins := []string{"big_demon", "big_zombie", "elf_f"}
 	id := uuid.NewV4().String()
@@ -29,6 +35,7 @@ func (world *World) AddPlayer() string {
 		Skin:   skins[rnd.Intn(len(skins))],
 		Action: actions.UnitIdle.String(),
 		Speed:  1,
+		Level:  levels.Lobby.String(),
 	}
 	world.Units[id] = unit
 
@@ -59,12 +66,6 @@ func (world *World) HandleEvent(event *pkg.Event) {
 		unit := world.Units[data.PlayerId]
 		unit.Action = actions.UnitMove.String()
 		unit.Direction = data.Direction
-		if unit.X < 0 {
-			unit.X = 0
-		}
-		if unit.Y < 0 {
-			unit.Y = 0
-		}
 
 	case pkg.Event_type_idle:
 		data := event.GetIdle()
@@ -84,20 +85,31 @@ func (world *World) Evolve() {
 		case <-ticker.C:
 			for _, unit := range world.Units {
 				if unit.Action == actions.UnitMove.String() {
+					side := unit.Side
+					posTo := level.Pos{X: unit.X, Y: unit.Y}
+
 					switch unit.Direction {
 					case pkg.Direction_left:
-						unit.X -= unit.Speed
-						unit.Side = pkg.Direction_left
+						posTo.X -= unit.Speed
+						side = pkg.Direction_left
 					case pkg.Direction_right:
-						unit.X += unit.Speed
-						unit.Side = pkg.Direction_right
+						posTo.X += unit.Speed
+						side = pkg.Direction_right
 					case pkg.Direction_up:
-						unit.Y -= unit.Speed
+						posTo.Y -= unit.Speed
 					case pkg.Direction_down:
-						unit.Y += unit.Speed
+						posTo.Y += unit.Speed
 					default:
 						log.Println("UNKNOWN DIRECTION: ", unit.Direction)
 					}
+
+					posTo = levels.Level(levels.LevelName(unit.Level)).WalkCalc(level.Vector{
+						From: level.Pos{X: unit.X, Y: unit.Y},
+						To:   posTo,
+					})
+					unit.Side = side
+					unit.X = posTo.X
+					unit.Y = posTo.Y
 				}
 			}
 		}
