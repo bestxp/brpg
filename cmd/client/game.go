@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/bestxp/brpg/internal/game"
+	"github.com/bestxp/brpg/internal/level/levels"
 	"log"
 	"sort"
 
@@ -17,9 +19,9 @@ import (
 type Game struct {
 	Conn *websocket.Conn
 
-	Camera     *Camera
-	frame      int
-	levelImage *e.Image
+	Camera *Camera
+	frame  int
+	world  *game.World
 }
 
 // Update proceeds the game state.
@@ -27,7 +29,6 @@ type Game struct {
 func (g *Game) Update() error {
 	// Write your game's logical update.
 	g.handleKeyboard(g.Conn)
-
 	return nil
 }
 
@@ -40,15 +41,17 @@ func (g *Game) Draw(screen *e.Image) {
 	g.frame++
 
 	sprites := []Sprite{}
-	for _, unit := range world.Units {
-		sprites = append(sprites, Sprite{
-			Frames: frames[unit.Skin+"_"+unit.Action].Frames,
-			Frame:  int(unit.Frame),
-			X:      unit.X,
-			Y:      unit.Y,
-			Side:   unit.Side,
-			Config: frames[unit.Skin+"_"+unit.Action].Config,
-		})
+	for _, unit := range g.world.Units {
+		if unit.Pos.GetLevel() == g.world.Me().Pos.GetLevel() {
+			sprites = append(sprites, Sprite{
+				Frames: frames[unit.Skin+"_"+unit.Action].Frames,
+				Frame:  int(unit.Frame),
+				X:      unit.Pos.X,
+				Y:      unit.Pos.Y,
+				Side:   unit.Side,
+				Config: frames[unit.Skin+"_"+unit.Action].Config,
+			})
+		}
 	}
 	sort.Slice(sprites, func(i, j int) bool {
 		depth1 := sprites[i].Y + float64(sprites[i].Config.Height)
@@ -78,8 +81,9 @@ func (g *Game) Draw(screen *e.Image) {
 
 func (f *Game) UnitInfo() string {
 	me := world.Me()
-	out := fmt.Sprintf("\n X: %f", me.X)
-	out += fmt.Sprintf("\n Y: %f", me.Y)
+	out := fmt.Sprintf("\n X: %f", me.Pos.X)
+	out += fmt.Sprintf("\n Y: %f", me.Pos.Y)
+	out += fmt.Sprintf("\n Lvl: %s", me.Pos.Level)
 	out += fmt.Sprintf("\n Speed: %f", me.Speed)
 
 	return out
@@ -96,14 +100,18 @@ func (g *Game) handleCamera(screen *e.Image) {
 		return
 	}
 
-	player := world.Units[world.MyID]
+	player := g.world.Me()
 	frame := frames[player.Skin+"_"+player.Action]
-	g.Camera.X = player.X - float64(config.width-frame.Config.Width)/2
-	g.Camera.Y = player.Y - float64(config.height-frame.Config.Height)/2
+	g.Camera.X = player.Pos.X - float64(config.width-frame.Config.Width)/2
+	g.Camera.Y = player.Pos.Y - float64(config.height-frame.Config.Height)/2
 
 	op := &e.DrawImageOptions{}
 	op.GeoM.Translate(-g.Camera.X, -g.Camera.Y)
-	screen.DrawImage(g.levelImage, op)
+	img, err := g.world.ActiveClientWorld().EImage()
+	if err != nil {
+		panic(err)
+	}
+	screen.DrawImage(img, op)
 }
 
 func (g *Game) handleKeyboard(c *websocket.Conn) {
@@ -126,6 +134,24 @@ func (g *Game) handleKeyboard(c *websocket.Conn) {
 		if lastKey != e.KeyA {
 			lastKey = e.KeyA
 		}
+	}
+
+	if e.IsKeyPressed(e.KeyQ) && lastKey != e.KeyQ {
+		startPos := levels.GetSewageLevel().StartPos
+		event = &pkg.Event{
+			Type: pkg.Event_type_teleport,
+			Data: &pkg.Event_Teleport{
+				Teleport: &pkg.EventTeleport{
+					PlayerId: world.MyID,
+					Pos: &pkg.Pos{
+						X:     startPos.X,
+						Y:     startPos.Y,
+						Level: levels.Sewage.String(),
+					},
+				},
+			},
+		}
+		lastKey = e.KeyQ
 	}
 
 	if e.IsKeyPressed(e.KeyD) || e.IsKeyPressed(e.KeyRight) {
@@ -184,6 +210,13 @@ func (g *Game) handleKeyboard(c *websocket.Conn) {
 			}
 			c.WriteMessage(websocket.BinaryMessage, message)
 		}
+	} else if event.Type == pkg.Event_type_teleport {
+		message, err := proto.Marshal(event)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		c.WriteMessage(websocket.BinaryMessage, message)
 	} else {
 		if unit.Action != actions.UnitIdle.String() {
 			event = &pkg.Event{

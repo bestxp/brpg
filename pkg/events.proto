@@ -10,18 +10,22 @@ enum Direction {
     down = 3;
 }
 
+message Pos {
+    double x = 1;
+    double y = 2;
+
+    string level = 3;
+}
+
 message Unit {
     string id = 1;
-    double x = 2;
-    double y = 3;
-    int32 frame = 4;
-    string skin = 5;
-    string action = 6;
-    double speed = 7;
-    Direction direction = 8;
-    Direction side = 9;
-
-    string level = 10;
+    Pos pos = 2;
+    int32 frame = 3;
+    string skin = 4;
+    string action = 5;
+    double speed = 6;
+    Direction direction = 7;
+    Direction side = 8;
 }
 
 message Event {
@@ -32,6 +36,7 @@ message Event {
         type_idle = 3;
         type_move = 4;
         type_empty = 5;
+        type_teleport = 6;
     }
     Type type = 1;
     oneof data {
@@ -40,6 +45,7 @@ message Event {
         EventExit exit = 4;
         EventIdle idle = 5;
         EventMove move = 6;
+        EventTeleport teleport = 7;
     }
 }
 
@@ -50,6 +56,11 @@ message EventInit {
 
 message EventConnect {
     Unit unit = 1;
+}
+
+message EventTeleport {
+    string player_id = 1;
+    Pos pos = 2;
 }
 
 message EventExit {

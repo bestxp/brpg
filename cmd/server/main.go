@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/bestxp/brpg/internal/game"
+	"github.com/bestxp/brpg/internal/level/levels"
 	engine "github.com/bestxp/brpg/pkg"
 	"github.com/gin-gonic/gin"
 )
@@ -16,7 +17,7 @@ func init() {
 }
 
 func main() {
-	go world.Evolve()
+	go world.Evolve(levels.All())
 
 	hub := newHub()
 	go hub.run()

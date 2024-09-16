@@ -1,10 +1,13 @@
-package tinyrpg
+package resources
+
+//go:generate pkger -o internal/resources
 
 import (
 	"image"
 	"image/png"
 	"os"
 
+	_ "github.com/bestxp/brpg"
 	"github.com/markbates/pkger"
 )
 
@@ -94,24 +97,6 @@ func LoadResources() (map[string]Frames, error) {
 		Config: cfgs["big_zombie_run_anim_f0.png"],
 	}
 
-	sprites["elf_f_idle"] = Frames{
-		Frames: []image.Image{
-			images["elf_f_idle_anim_f0.png"],
-			images["elf_f_idle_anim_f1.png"],
-			images["elf_f_idle_anim_f2.png"],
-			images["elf_f_idle_anim_f3.png"],
-		},
-		Config: cfgs["elf_f_idle_anim_f0.png"],
-	}
-	sprites["elf_f_run"] = Frames{
-		Frames: []image.Image{
-			images["elf_f_run_anim_f0.png"],
-			images["elf_f_run_anim_f1.png"],
-			images["elf_f_run_anim_f2.png"],
-			images["elf_f_run_anim_f3.png"],
-		},
-		Config: cfgs["elf_f_run_anim_f0.png"],
-	}
 	sprites["floor_1"] = Frames{
 		Frames: []image.Image{images["floor_1.png"]},
 		Config: cfgs["floor_1.png"],

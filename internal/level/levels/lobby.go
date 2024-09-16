@@ -1,9 +1,17 @@
 package levels
 
-import "github.com/bestxp/brpg/internal/level"
+import (
+	"github.com/bestxp/brpg/internal/level"
+	"github.com/bestxp/brpg/internal/resources"
+)
 
 func GetLobbyLevel() *level.Level {
-	l := level.NewLevel("Trial's Cave")
+	frames, err := resources.LoadResources()
+	if err != nil {
+		panic(err)
+	}
+
+	l := level.NewLevel("Trial's Cave", frames)
 	l.StartPos.X = 100
 	l.StartPos.Y = 100
 

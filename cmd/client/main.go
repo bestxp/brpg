@@ -5,9 +5,9 @@ import (
 	"log"
 	"os"
 
-	engine "github.com/bestxp/brpg"
 	"github.com/bestxp/brpg/internal/game"
 	"github.com/bestxp/brpg/internal/level/levels"
+	"github.com/bestxp/brpg/internal/resources"
 	"github.com/bestxp/brpg/pkg"
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
@@ -39,7 +39,7 @@ type Camera struct {
 var world *game.World
 
 var config *Config
-var frames map[string]engine.Frames
+var frames map[string]resources.Frames
 var lastKey e.Key
 var prevKey e.Key
 
@@ -57,22 +57,21 @@ func init() {
 	}
 
 	var err error
-	frames, err = engine.LoadResources()
+	frames, err = resources.LoadResources()
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
 func main() {
-	go world.Evolve()
+	go world.Evolve(levels.All())
 	var err error
 
 	host := getEnv("HOST", "localhost")
 	c, _, _ := websocket.DefaultDialer.Dial("ws://"+host+":3000/ws", nil)
 
-	game := &Game{Conn: c}
+	game := &Game{Conn: c, world: world}
 
-	game.levelImage, err = levels.GetLobbyLevel().EImage(frames)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -97,8 +96,8 @@ func main() {
 			if event.Type == pkg.Event_type_connect {
 				me := world.Units[world.MyID]
 				game.Camera = &Camera{
-					X:       me.X,
-					Y:       me.Y,
+					X:       me.Pos.X,
+					Y:       me.Pos.Y,
 					Padding: 30,
 				}
 			}

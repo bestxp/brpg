@@ -5,7 +5,8 @@ import "github.com/bestxp/brpg/internal/level"
 type LevelName string
 
 const (
-	Lobby LevelName = "lobby"
+	Lobby  LevelName = "lobby"
+	Sewage LevelName = "sewage"
 )
 
 func (l LevelName) String() string {
@@ -16,6 +17,7 @@ var levels = map[LevelName]*level.Level{}
 
 func init() {
 	levels[Lobby] = GetLobbyLevel()
+	levels[Sewage] = GetSewageLevel()
 }
 
 func All() map[LevelName]*level.Level {

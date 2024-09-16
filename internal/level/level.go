@@ -2,8 +2,9 @@ package level
 
 import (
 	"errors"
-	engine "github.com/bestxp/brpg"
+	"github.com/bestxp/brpg/internal/resources"
 	e "github.com/hajimehoshi/ebiten/v2"
+	"log"
 	"math"
 	"sync"
 )
@@ -32,6 +33,8 @@ type Level struct {
 
 	once  sync.Once
 	image *e.Image
+
+	frames map[string]resources.Frames
 }
 
 type Tile struct {
@@ -41,8 +44,8 @@ type Tile struct {
 	TopLeft Pos
 }
 
-func NewLevel(name string) *Level {
-	return &Level{_map: [][]Tile{}, scale: baseScale, Name: name}
+func NewLevel(name string, frames map[string]resources.Frames) *Level {
+	return &Level{_map: [][]Tile{}, scale: baseScale, Name: name, frames: frames}
 }
 
 func (l *Level) Map() [][]Tile {
@@ -53,8 +56,8 @@ func (l *Level) SetMap(m [][]Tile) {
 	for i, row := range m {
 		for j, t := range row {
 			w, h := t.Size()
-			m[i][j].TopLeft.X = float64(w * i)
-			m[i][j].TopLeft.Y = float64(h * j)
+			m[i][j].TopLeft.X = float64(w * j)
+			m[i][j].TopLeft.Y = float64(h * i)
 		}
 	}
 
@@ -80,51 +83,17 @@ func (l *Level) getTileByCoords(coors Pos) (int, int, Tile, error) {
 }
 
 func (l *Level) WalkCalc(vector Vector) Pos {
-	topX, topY, bottomX, bottomY := l.LevelSize()
 
 	from := vector.From
 	toCoords := vector.To
-	walkStopped := false
-
-	walkX := false
-	walkY := false
 
 	// add shifts for calculate end coords
 	if vector.From.Y < vector.To.Y {
 		vector.From.Y += l.unitSize()
-		walkY = true
-	} else if vector.From.Y > vector.To.Y {
-		walkY = true
 	}
 
 	if vector.From.X < vector.To.X {
 		vector.From.X += l.unitSize()
-		walkX = true
-	} else if vector.From.X > vector.To.X {
-		walkX = true
-	}
-
-	if float64(topX) >= vector.To.X && !walkY {
-		toCoords.X = float64(topX)
-		walkStopped = true
-	}
-	if float64(bottomX) <= vector.To.X && !walkY {
-		toCoords.X = float64(bottomX)
-		walkStopped = true
-	}
-
-	if float64(topY) >= vector.To.Y && !walkX {
-		toCoords.Y = float64(topY)
-		walkStopped = true
-	}
-
-	if float64(bottomY) <= vector.To.Y && !walkX {
-		toCoords.Y = float64(bottomY)
-		walkStopped = true
-	}
-
-	if walkStopped {
-		return toCoords
 	}
 
 	_, _, tileFrom, err := l.getTileByCoords(vector.From)
@@ -168,8 +137,13 @@ func (t Tile) Size() (int, int) {
 	return baseTileSize, baseTileSize
 }
 
-func (l *Level) EImage(frames map[string]engine.Frames) (*e.Image, error) {
+func (l *Level) EImage() (*e.Image, error) {
+	if l.image != nil {
+		return l.image, nil
+	}
+
 	_, _, width, height := l.LevelSize()
+	log.Println("w ", width, "h ", height)
 
 	levelImage := e.NewImage(width, height)
 
@@ -179,7 +153,7 @@ func (l *Level) EImage(frames map[string]engine.Frames) (*e.Image, error) {
 			op.GeoM.Translate(tile.TopLeft.X, tile.TopLeft.Y)
 			op.GeoM.Scale(float64(l.Scale()), float64(l.Scale()))
 
-			img := e.NewImageFromImage(frames[tile.Texture].Frames[0])
+			img := e.NewImageFromImage(l.frames[tile.Texture].Frames[0])
 			levelImage.DrawImage(img, op)
 		}
 	}
