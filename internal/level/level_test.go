@@ -15,7 +15,7 @@ func TestLevel_WalcCalc(t *testing.T) {
 		Texture: "wall",
 	}
 
-	base := NewLevel("test", nil)
+	base := NewLevel(LevelName("test"), "test", nil)
 	base.SetMap([][]Tile{
 		{wall, wall, wall, wall},
 		{wall, floor, floor, wall},

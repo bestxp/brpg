@@ -4,7 +4,6 @@ import (
 	"errors"
 	"github.com/bestxp/brpg/internal/resources"
 	e "github.com/hajimehoshi/ebiten/v2"
-	"log"
 	"math"
 	"sync"
 )
@@ -158,9 +157,7 @@ func (l *Level) EImage() (*e.Image, error) {
 	if l.image != nil {
 		return l.image, nil
 	}
-
 	_, _, width, height := l.LevelSize()
-	log.Println("w ", width, "h ", height)
 
 	levelImage := e.NewImage(width, height)
 

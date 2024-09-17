@@ -40,14 +40,12 @@ var world *game.World
 
 var config *Config
 var frames map[string]resources.Frames
-var lastKey e.Key
-var prevKey e.Key
 
 func init() {
 	config = &Config{
 		title:  "Just Dungeon",
-		width:  640,
-		height: 480,
+		width:  1024,
+		height: 768,
 		scale:  2,
 	}
 
@@ -64,7 +62,8 @@ func init() {
 }
 
 func main() {
-	go world.Evolve(levels.All())
+	levels.All()
+	go world.Evolve()
 	var err error
 
 	host := getEnv("HOST", "localhost")

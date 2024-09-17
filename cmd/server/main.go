@@ -17,7 +17,8 @@ func init() {
 }
 
 func main() {
-	go world.Evolve(levels.All())
+	levels.All()
+	go world.Evolve()
 
 	hub := newHub()
 	go hub.run()

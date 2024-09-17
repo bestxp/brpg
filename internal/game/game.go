@@ -25,14 +25,22 @@ func (world *World) Me() *pkg.Unit {
 }
 
 func (world *World) ActiveClientWorld() *level.Level {
-	return world.Levels[levels.LevelName(world.Me().Pos.Level)]
+	lvl, err := levels.LevelName(world.Me().Pos.Level).Level()
+	if err != nil {
+		panic(err)
+	}
+	return lvl
 }
 
 func (world *World) AddPlayer() string {
 	skins := []string{"big_demon", "big_zombie"}
 	id := uuid.NewV4().String()
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
-	level := world.Levels[levels.Lobby]
+	level, err := levels.Lobby.Level()
+	if err != nil {
+		panic(err)
+	}
+
 	unit := &pkg.Unit{
 		Id:     id,
 		Frame:  int32(rnd.Intn(4)),
@@ -90,9 +98,7 @@ func (world *World) HandleEvent(event *pkg.Event) {
 	}
 }
 
-func (world *World) Evolve(lvl map[levels.LevelName]*level.Level) {
-	world.Levels = lvl
-
+func (world *World) Evolve() {
 	ticker := time.NewTicker(time.Second / 60)
 
 	for {

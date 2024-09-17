@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"image/color"
 	"log"
 	"sort"
 
@@ -19,9 +20,12 @@ import (
 type Game struct {
 	Conn *websocket.Conn
 
-	Camera *Camera
-	frame  int
-	world  *game.World
+	gui *e.Image
+
+	Camera           *Camera
+	frame            int
+	world            *game.World
+	lastKey, prevKey e.Key
 }
 
 // Update proceeds the game state.
@@ -35,8 +39,30 @@ func (g *Game) Update() error {
 // Draw draws the game screen.
 // Draw is called every frame (typically 1/60[s] for 60Hz display).
 func (g *Game) Draw(screen *e.Image) {
+	w, h := e.WindowSize()
+	g.gui = e.NewImage(w, h-100)
+	g.gui.Fill(color.RGBA{
+		R: 90,
+		G: 90,
+		B: 90,
+		A: 255,
+	})
+	guiOp := &e.DrawImageOptions{}
+	guiOp.GeoM.Translate(0, 50)
+
 	// Write your game's rendering.
-	g.handleCamera(screen)
+	g.handleCamera(g.gui, w, h-100, 0, 50)
+
+	screen.DrawImage(g.gui, guiOp)
+
+	for i := 0; i < 10; i++ {
+		icon := e.NewImage(32, 32)
+		icon.Fill(color.White)
+		icOp := &e.DrawImageOptions{}
+		icOp.GeoM.Translate((32+(50-32)/2)*float64(i)+(50-32)/2, (50-32)/2)
+
+		screen.DrawImage(icon, icOp)
+	}
 
 	g.frame++
 
@@ -95,18 +121,19 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 	return e.WindowSize()
 }
 
-func (g *Game) handleCamera(screen *e.Image) {
+func (g *Game) handleCamera(screen *e.Image, w, h int, shiftX, shiftY float64) {
 	if g.Camera == nil {
 		return
 	}
 
 	player := g.world.Me()
 	frame := frames[player.Skin+"_"+player.Action]
-	g.Camera.X = player.Pos.X - float64(config.width-frame.Config.Width)/2
-	g.Camera.Y = player.Pos.Y - float64(config.height-frame.Config.Height)/2
+
+	g.Camera.X = player.Pos.X - float64(w-frame.Config.Width)/2
+	g.Camera.Y = player.Pos.Y - float64(h-frame.Config.Height)/2
 
 	op := &e.DrawImageOptions{}
-	op.GeoM.Translate(-g.Camera.X, -g.Camera.Y)
+	op.GeoM.Translate(-g.Camera.X-shiftX, -g.Camera.Y-shiftY)
 	img, err := g.world.ActiveClientWorld().EImage()
 	if err != nil {
 		panic(err)
@@ -131,12 +158,12 @@ func (g *Game) handleKeyboard(c *websocket.Conn) {
 				},
 			},
 		}
-		if lastKey != e.KeyA {
-			lastKey = e.KeyA
+		if g.lastKey != e.KeyA {
+			g.lastKey = e.KeyA
 		}
 	}
 
-	if e.IsKeyPressed(e.KeyQ) && lastKey != e.KeyQ {
+	if e.IsKeyPressed(e.KeyQ) && g.lastKey != e.KeyQ {
 		startPos := levels.GetSewageLevel().StartPos
 		event = &pkg.Event{
 			Type: pkg.Event_type_teleport,
@@ -151,9 +178,9 @@ func (g *Game) handleKeyboard(c *websocket.Conn) {
 				},
 			},
 		}
-		lastKey = e.KeyQ
+		g.lastKey = e.KeyQ
 	}
-	if e.IsKeyPressed(e.KeyE) && lastKey != e.KeyE {
+	if e.IsKeyPressed(e.KeyE) && g.lastKey != e.KeyE {
 		startPos := levels.GetLobbyLevel().StartPos
 		event = &pkg.Event{
 			Type: pkg.Event_type_teleport,
@@ -168,7 +195,7 @@ func (g *Game) handleKeyboard(c *websocket.Conn) {
 				},
 			},
 		}
-		lastKey = e.KeyE
+		g.lastKey = e.KeyE
 	}
 
 	if e.IsKeyPressed(e.KeyD) || e.IsKeyPressed(e.KeyRight) {
@@ -181,8 +208,8 @@ func (g *Game) handleKeyboard(c *websocket.Conn) {
 				},
 			},
 		}
-		if lastKey != e.KeyD {
-			lastKey = e.KeyD
+		if g.lastKey != e.KeyD {
+			g.lastKey = e.KeyD
 		}
 	}
 
@@ -196,8 +223,8 @@ func (g *Game) handleKeyboard(c *websocket.Conn) {
 				},
 			},
 		}
-		if lastKey != e.KeyW {
-			lastKey = e.KeyW
+		if g.lastKey != e.KeyW {
+			g.lastKey = e.KeyW
 		}
 	}
 
@@ -211,15 +238,15 @@ func (g *Game) handleKeyboard(c *websocket.Conn) {
 				},
 			},
 		}
-		if lastKey != e.KeyS {
-			lastKey = e.KeyS
+		if g.lastKey != e.KeyS {
+			g.lastKey = e.KeyS
 		}
 	}
 
 	unit := world.Units[world.MyID]
 
 	if event.Type == pkg.Event_type_move {
-		if prevKey != lastKey {
+		if g.prevKey != g.lastKey {
 			message, err := proto.Marshal(event)
 			if err != nil {
 				log.Println(err)
@@ -248,9 +275,9 @@ func (g *Game) handleKeyboard(c *websocket.Conn) {
 				return
 			}
 			c.WriteMessage(websocket.BinaryMessage, message)
-			lastKey = -1
+			g.lastKey = -1
 		}
 	}
 
-	prevKey = lastKey
+	g.prevKey = g.lastKey
 }
