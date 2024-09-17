@@ -15,6 +15,8 @@ const baseScale int = 2
 
 var errOutOfBound = errors.New("out of map bound")
 
+type LevelName string
+
 type Pos struct {
 	X, Y float64
 }
@@ -26,6 +28,7 @@ type Vector struct {
 type Level struct {
 	scale int
 
+	ID   LevelName
 	Name string
 	_map [][]Tile
 
@@ -44,8 +47,22 @@ type Tile struct {
 	TopLeft Pos
 }
 
-func NewLevel(name string, frames map[string]resources.Frames) *Level {
-	return &Level{_map: [][]Tile{}, scale: baseScale, Name: name, frames: frames}
+func NewLevel(
+	ID LevelName,
+	name string,
+	frames map[string]resources.Frames,
+) *Level {
+	return &Level{
+		ID:     ID,
+		_map:   [][]Tile{},
+		scale:  baseScale,
+		Name:   name,
+		frames: frames,
+	}
+}
+
+func (l LevelName) String() string {
+	return string(l)
 }
 
 func (l *Level) Map() [][]Tile {

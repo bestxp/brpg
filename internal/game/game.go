@@ -43,7 +43,7 @@ func (world *World) AddPlayer() string {
 		Pos: &pkg.Pos{
 			X:     level.StartPos.X,
 			Y:     level.StartPos.Y,
-			Level: levels.Lobby.String(),
+			Level: levels.Lobby.BaseName().String(),
 		},
 	}
 	world.Units[id] = unit
@@ -121,7 +121,13 @@ func (world *World) Evolve(lvl map[levels.LevelName]*level.Level) {
 						log.Println("UNKNOWN DIRECTION: ", unit.Direction)
 					}
 
-					posTo = levels.Level(levels.LevelName(unit.Pos.Level)).WalkCalc(level.Vector{
+					lvl, err := levels.LevelName(unit.Pos.Level).Level()
+					if err != nil {
+						log.Println("UNKNOWN level")
+						return
+					}
+
+					posTo = lvl.WalkCalc(level.Vector{
 						From: level.Pos{X: unit.Pos.X, Y: unit.Pos.Y},
 						To:   posTo,
 					})

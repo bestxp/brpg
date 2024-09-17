@@ -1,16 +1,27 @@
 package levels
 
-import "github.com/bestxp/brpg/internal/level"
+import (
+	"fmt"
 
-type LevelName string
+	"github.com/bestxp/brpg/internal/level"
+)
+
+type LevelName level.LevelName
 
 const (
 	Lobby  LevelName = "lobby"
 	Sewage LevelName = "sewage"
 )
 
-func (l LevelName) String() string {
-	return string(l)
+func (l LevelName) BaseName() level.LevelName {
+	return level.LevelName(l)
+}
+
+func (l LevelName) Level() (*level.Level, error) {
+	if lvl, ok := levels[l]; ok {
+		return lvl, nil
+	}
+	return nil, fmt.Errorf("%s not exists", l)
 }
 
 var levels = map[LevelName]*level.Level{}
@@ -22,8 +33,4 @@ func init() {
 
 func All() map[LevelName]*level.Level {
 	return levels
-}
-
-func Level(l LevelName) *level.Level {
-	return levels[l]
 }

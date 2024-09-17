@@ -11,7 +11,7 @@ func GetSewageLevel() *level.Level {
 		panic(err)
 	}
 
-	l := level.NewLevel("Sewage Cave", frames)
+	l := level.NewLevel(Sewage.BaseName(), "Sewage Cave", frames)
 	l.StartPos.X = 32
 	l.StartPos.Y = 32
 

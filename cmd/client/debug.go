@@ -11,7 +11,7 @@ func PrintMemUsage() string {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	// For info on each, see: https://golang.org/pkg/runtime/#MemStats
-	out := fmt.Sprintf("\n Alloc = %v MiB", bToMb(m.Alloc))
+	out := fmt.Sprintf("\n\n Alloc = %v MiB", bToMb(m.Alloc))
 	out += fmt.Sprintf("\n Sys = %v MiB", bToMb(m.Sys))
 	return out
 }

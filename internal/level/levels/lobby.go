@@ -11,7 +11,7 @@ func GetLobbyLevel() *level.Level {
 		panic(err)
 	}
 
-	l := level.NewLevel("Trial's Cave", frames)
+	l := level.NewLevel(Lobby.BaseName(), "Trial's Cave", frames)
 	l.StartPos.X = 100
 	l.StartPos.Y = 100
 

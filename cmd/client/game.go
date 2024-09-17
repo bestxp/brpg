@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/bestxp/brpg/internal/game"
-	"github.com/bestxp/brpg/internal/level/levels"
 	"log"
 	"sort"
 
 	"github.com/bestxp/brpg/internal/actions"
+	"github.com/bestxp/brpg/internal/game"
+	"github.com/bestxp/brpg/internal/level/levels"
 	"github.com/bestxp/brpg/pkg"
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
@@ -146,12 +146,29 @@ func (g *Game) handleKeyboard(c *websocket.Conn) {
 					Pos: &pkg.Pos{
 						X:     startPos.X,
 						Y:     startPos.Y,
-						Level: levels.Sewage.String(),
+						Level: levels.Sewage.BaseName().String(),
 					},
 				},
 			},
 		}
 		lastKey = e.KeyQ
+	}
+	if e.IsKeyPressed(e.KeyE) && lastKey != e.KeyE {
+		startPos := levels.GetLobbyLevel().StartPos
+		event = &pkg.Event{
+			Type: pkg.Event_type_teleport,
+			Data: &pkg.Event_Teleport{
+				Teleport: &pkg.EventTeleport{
+					PlayerId: world.MyID,
+					Pos: &pkg.Pos{
+						X:     startPos.X,
+						Y:     startPos.Y,
+						Level: levels.Lobby.BaseName().String(),
+					},
+				},
+			},
+		}
+		lastKey = e.KeyE
 	}
 
 	if e.IsKeyPressed(e.KeyD) || e.IsKeyPressed(e.KeyRight) {
