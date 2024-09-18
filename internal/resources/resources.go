@@ -3,8 +3,10 @@ package resources
 //go:generate pkger -o internal/resources
 
 import (
+	"bytes"
 	"image"
 	"image/png"
+	"io"
 	"os"
 
 	_ "github.com/bestxp/brpg"
@@ -16,6 +18,36 @@ type Frames struct {
 	image.Config
 }
 
+func LoadAudios() (map[string]io.ReadSeeker, error) {
+	out := map[string]io.ReadSeeker{}
+
+	prefix := "/resources/audio"
+
+	err := pkger.Walk(prefix, func(path string, info os.FileInfo, err error) error {
+		if info.IsDir() == false {
+			filename := prefix + "/" + info.Name()
+			file, err := pkger.Open(filename)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+
+			byt, err := io.ReadAll(file)
+			if err != nil {
+				return err
+			}
+			out[filename] = bytes.NewReader(byt)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func LoadResources() (map[string]Frames, error) {
 	images := map[string]image.Image{}
 	cfgs := map[string]image.Config{}
@@ -23,7 +55,6 @@ func LoadResources() (map[string]Frames, error) {
 
 	prefix := "/resources/sprites"
 	err := pkger.Walk(prefix, func(path string, info os.FileInfo, err error) error {
-
 		if info.IsDir() == false {
 			filename := prefix + "/" + info.Name()
 			file, err := pkger.Open(filename)
@@ -54,7 +85,6 @@ func LoadResources() (map[string]Frames, error) {
 
 		return nil
 	})
-
 	if err != nil {
 		return sprites, err
 	}

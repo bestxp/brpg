@@ -7,12 +7,16 @@ import (
 	"sort"
 
 	"github.com/bestxp/brpg/internal/actions"
+	"github.com/bestxp/brpg/internal/client/camera"
 	"github.com/bestxp/brpg/internal/game"
 	"github.com/bestxp/brpg/internal/level/levels"
+	"github.com/bestxp/brpg/internal/resources"
 	"github.com/bestxp/brpg/pkg"
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
 	e "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/audio"
+	"github.com/hajimehoshi/ebiten/v2/audio/mp3"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
@@ -22,10 +26,48 @@ type Game struct {
 
 	gui *e.Image
 
-	Camera           *Camera
+	Camera           *camera.Camera
 	frame            int
 	world            *game.World
 	lastKey, prevKey e.Key
+
+	audioContext *audio.Context
+
+	showDebug bool
+}
+
+func NewGame(c *websocket.Conn, w *game.World) *Game {
+	g := &Game{
+		Conn:   c,
+		world:  w,
+		Camera: camera.NewCamera(0, 0),
+	}
+	au, err := resources.LoadAudios()
+	if err != nil {
+		panic(err)
+	}
+	g.audioContext = audio.NewContext(44100)
+	track := au["/resources/audio/bg.mp3"]
+	if track != nil {
+		s, err := mp3.Decode(g.audioContext, au["/resources/audio/bg.mp3"])
+		if err != nil {
+			panic(err)
+		}
+		p, err := audio.NewPlayer(g.audioContext, s)
+		if err != nil {
+			panic(err)
+		}
+		p.SetVolume(0.5)
+		go func() {
+			for !p.IsPlaying() {
+				p.Play()
+			}
+		}()
+	} else {
+		println("no track")
+	}
+
+	return g
 }
 
 // Update proceeds the game state.
@@ -33,36 +75,21 @@ type Game struct {
 func (g *Game) Update() error {
 	// Write your game's logical update.
 	g.handleKeyboard(g.Conn)
+	w, h := e.WindowSize()
+	g.Camera.FollowTarget(world.Me().Pos.X, world.Me().Pos.Y, float64(w), float64(h-100), 0, 50)
+	wmap, _ := world.ActiveClientWorld().EImage()
+	wmapW, wmapH := wmap.Size()
+	ww, wh := e.WindowSize()
+	g.Camera.Constrain(
+		float64(wmapW),
+		float64(wmapH),
+		float64(ww),
+		float64(wh-100),
+	)
 	return nil
 }
 
-// Draw draws the game screen.
-// Draw is called every frame (typically 1/60[s] for 60Hz display).
-func (g *Game) Draw(screen *e.Image) {
-	w, h := e.WindowSize()
-	g.gui = e.NewImage(w, h-100)
-	g.gui.Fill(color.RGBA{
-		R: 90,
-		G: 90,
-		B: 90,
-		A: 255,
-	})
-	guiOp := &e.DrawImageOptions{}
-	guiOp.GeoM.Translate(0, 50)
-
-	// Write your game's rendering.
-	g.handleCamera(g.gui, w, h-100, 0, 50)
-
-	screen.DrawImage(g.gui, guiOp)
-
-	for i := 0; i < 10; i++ {
-		icon := e.NewImage(32, 32)
-		icon.Fill(color.White)
-		icOp := &e.DrawImageOptions{}
-		icOp.GeoM.Translate((32+(50-32)/2)*float64(i)+(50-32)/2, (50-32)/2)
-
-		screen.DrawImage(icon, icOp)
-	}
+func (g *Game) DrawGUI(screen *e.Image) {
 
 	g.frame++
 
@@ -79,6 +106,7 @@ func (g *Game) Draw(screen *e.Image) {
 			})
 		}
 	}
+
 	sort.Slice(sprites, func(i, j int) bool {
 		depth1 := sprites[i].Y + float64(sprites[i].Config.Height)
 		depth2 := sprites[j].Y + float64(sprites[j].Config.Height)
@@ -93,19 +121,57 @@ func (g *Game) Draw(screen *e.Image) {
 			op.GeoM.Translate(float64(sprite.Config.Width), 0)
 		}
 
-		op.GeoM.Translate(sprite.X-g.Camera.X, sprite.Y-g.Camera.Y)
+		op.GeoM.Translate(sprite.X+g.Camera.X, sprite.Y+g.Camera.Y)
 
 		img := e.NewImageFromImage(sprite.Frames[(g.frame/7+sprite.Frame)%4])
 		screen.DrawImage(img, op)
 	}
-
-	ebitenutil.DebugPrint(screen,
-		fmt.Sprintf("TPS: %0.2f \n VS: %v \n", e.CurrentTPS(), e.IsVsyncEnabled())+
-			g.UnitInfo()+
-			PrintMemUsage())
 }
 
-func (f *Game) UnitInfo() string {
+// Draw draws the game screen.
+// Draw is called every frame (typically 1/60[s] for 60Hz display).
+func (g *Game) Draw(screen *e.Image) {
+	for i := 0; i < 10; i++ {
+		icon := e.NewImage(32, 32)
+		icon.Fill(color.White)
+		icOp := &e.DrawImageOptions{}
+		icOp.GeoM.Translate((32+(50-32)/2)*float64(i)+(50-32)/2, (50-32)/2)
+
+		screen.DrawImage(icon, icOp)
+	}
+
+	w, h := e.WindowSize()
+	g.gui = e.NewImage(w, h-100)
+	g.gui.Fill(color.RGBA{
+		R: 90,
+		G: 90,
+		B: 90,
+		A: 255,
+	})
+
+	// render world tiles
+	worldOp := &e.DrawImageOptions{}
+	worldOp.GeoM.Translate(g.Camera.X, g.Camera.Y)
+	worldMap, err := g.world.ActiveClientWorld().EImage()
+	if err != nil {
+		panic(err)
+	}
+	g.gui.DrawImage(worldMap, worldOp)
+	g.DrawGUI(g.gui)
+
+	guiOp := &e.DrawImageOptions{}
+	guiOp.GeoM.Translate(0, 50)
+	screen.DrawImage(g.gui, guiOp)
+
+	if g.showDebug {
+		ebitenutil.DebugPrint(screen,
+			fmt.Sprintf("TPS: %0.2f \n VS: %v \n", e.CurrentTPS(), e.IsVsyncEnabled())+
+				g.UnitInfo()+
+				PrintMemUsage())
+	}
+}
+
+func (g *Game) UnitInfo() string {
 	me := world.Me()
 	out := fmt.Sprintf("\n X: %f", me.Pos.X)
 	out += fmt.Sprintf("\n Y: %f", me.Pos.Y)
@@ -117,35 +183,21 @@ func (f *Game) UnitInfo() string {
 
 // Layout takes the outside size (e.g., the window size) and returns the (logical) screen size.
 // If you don't have to adjust the screen size with the outside size, just return a fixed size.
-func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
+func (g *Game) Layout(_, _ int) (screenWidth, screenHeight int) {
 	return e.WindowSize()
-}
-
-func (g *Game) handleCamera(screen *e.Image, w, h int, shiftX, shiftY float64) {
-	if g.Camera == nil {
-		return
-	}
-
-	player := g.world.Me()
-	frame := frames[player.Skin+"_"+player.Action]
-
-	g.Camera.X = player.Pos.X - float64(w-frame.Config.Width)/2
-	g.Camera.Y = player.Pos.Y - float64(h-frame.Config.Height)/2
-
-	op := &e.DrawImageOptions{}
-	op.GeoM.Translate(-g.Camera.X-shiftX, -g.Camera.Y-shiftY)
-	img, err := g.world.ActiveClientWorld().EImage()
-	if err != nil {
-		panic(err)
-	}
-	screen.DrawImage(img, op)
 }
 
 func (g *Game) handleKeyboard(c *websocket.Conn) {
 	event := &pkg.Event{}
 
-	if e.IsKeyPressed(e.KeyV) {
+	if e.IsKeyPressed(e.KeyV) && g.lastKey != e.KeyV {
 		e.SetVsyncEnabled(!e.IsVsyncEnabled())
+		g.lastKey = e.KeyV
+	}
+
+	if e.IsKeyPressed(e.KeyF4) && g.lastKey != e.KeyF4 {
+		g.showDebug = !g.showDebug
+		g.lastKey = e.KeyF4
 	}
 
 	if e.IsKeyPressed(e.KeyA) || e.IsKeyPressed(e.KeyLeft) {

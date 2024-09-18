@@ -31,9 +31,8 @@ type Sprite struct {
 }
 
 type Camera struct {
-	X       float64
-	Y       float64
-	Padding float64
+	X float64
+	Y float64
 }
 
 var world *game.World
@@ -69,7 +68,7 @@ func main() {
 	host := getEnv("HOST", "localhost")
 	c, _, _ := websocket.DefaultDialer.Dial("ws://"+host+":3000/ws", nil)
 
-	game := &Game{Conn: c, world: world}
+	game := NewGame(c, world)
 
 	if err != nil {
 		log.Fatal(err)
@@ -93,12 +92,7 @@ func main() {
 			world.HandleEvent(event)
 
 			if event.Type == pkg.Event_type_connect {
-				me := world.Units[world.MyID]
-				game.Camera = &Camera{
-					X:       me.Pos.X,
-					Y:       me.Pos.Y,
-					Padding: 30,
-				}
+				game.Camera.InitCoords(world.Me().Pos.X, world.Me().Pos.Y)
 			}
 		}
 	}(c)

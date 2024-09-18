@@ -23,6 +23,8 @@ require (
 	github.com/go-playground/validator/v10 v10.11.2 // indirect
 	github.com/gobuffalo/here v0.6.0 // indirect
 	github.com/goccy/go-json v0.10.0 // indirect
+	github.com/hajimehoshi/go-mp3 v0.3.1 // indirect
+	github.com/hajimehoshi/oto v0.6.8 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
