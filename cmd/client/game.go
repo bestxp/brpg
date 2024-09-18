@@ -76,7 +76,7 @@ func (g *Game) Update() error {
 	// Write your game's logical update.
 	g.handleKeyboard(g.Conn)
 	w, h := e.WindowSize()
-	g.Camera.FollowTarget(world.Me().Pos.X, world.Me().Pos.Y, float64(w), float64(h-100), 0, 50)
+	g.Camera.FollowTarget(world.Me().Pos.X-8, world.Me().Pos.Y-8, float64(w), float64(h-100), 0, 50)
 	wmap, _ := world.ActiveClientWorld().EImage()
 	wmapW, wmapH := wmap.Size()
 	ww, wh := e.WindowSize()
