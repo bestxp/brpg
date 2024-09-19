@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/hajimehoshi/ebiten/v2/audio/mp3"
+	"image"
 	"image/color"
 	"log"
 	"sort"
@@ -16,7 +18,6 @@ import (
 	"github.com/gorilla/websocket"
 	e "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
-	"github.com/hajimehoshi/ebiten/v2/audio/mp3"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
@@ -34,6 +35,48 @@ type Game struct {
 	audioContext *audio.Context
 
 	showDebug bool
+
+	polygons []*Poly
+}
+
+type Poly struct {
+	rect image.Rectangle
+	icon *e.Image
+
+	hovered bool
+}
+
+func (p *Poly) Icon() *e.Image {
+	if p.icon == nil {
+		p.icon = e.NewImage(32, 32)
+		p.icon.Fill(color.White)
+	}
+
+	return p.icon
+}
+
+func (p *Poly) Hover() {
+	if !p.hovered {
+		p.icon.Fill(color.RGBA{
+			R: 255,
+			G: 0,
+			B: 0,
+			A: 255,
+		})
+		p.hovered = true
+	}
+
+}
+
+func (p *Poly) Over() {
+	if p.hovered {
+		p.icon.Fill(color.White)
+		p.hovered = false
+	}
+}
+
+func (p *Poly) SetRect(r image.Rectangle) {
+	p.rect = r
 }
 
 func NewGame(c *websocket.Conn, w *game.World) *Game {
@@ -49,22 +92,27 @@ func NewGame(c *websocket.Conn, w *game.World) *Game {
 	g.audioContext = audio.NewContext(44100)
 	track := au["/resources/audio/bg.mp3"]
 	if track != nil {
-		s, err := mp3.Decode(g.audioContext, au["/resources/audio/bg.mp3"])
+
+		s, err := mp3.Decode(g.audioContext, track.Stream)
 		if err != nil {
 			panic(err)
 		}
-		p, err := audio.NewPlayer(g.audioContext, s)
+		loop := audio.NewInfiniteLoop(s, s.Length())
+
+		p, err := audio.NewPlayer(g.audioContext, loop)
 		if err != nil {
 			panic(err)
 		}
 		p.SetVolume(0.5)
-		go func() {
-			for !p.IsPlaying() {
-				p.Play()
-			}
-		}()
+		p.Play()
+
 	} else {
 		println("no track")
+	}
+
+	g.polygons = make([]*Poly, 0, 100)
+	for i := 0; i < 10; i++ {
+		g.polygons = append(g.polygons, &Poly{})
 	}
 
 	return g
@@ -75,7 +123,9 @@ func NewGame(c *websocket.Conn, w *game.World) *Game {
 func (g *Game) Update() error {
 	// Write your game's logical update.
 	g.handleKeyboard(g.Conn)
+	g.handleMouse(g.Conn)
 	w, h := e.WindowSize()
+	// @todo calc by dx dy of sprite
 	g.Camera.FollowTarget(world.Me().Pos.X-8, world.Me().Pos.Y-8, float64(w), float64(h-100), 0, 50)
 	wmap, _ := world.ActiveClientWorld().EImage()
 	wmapW, wmapH := wmap.Size()
@@ -90,7 +140,6 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) DrawGUI(screen *e.Image) {
-
 	g.frame++
 
 	sprites := []Sprite{}
@@ -131,12 +180,14 @@ func (g *Game) DrawGUI(screen *e.Image) {
 // Draw draws the game screen.
 // Draw is called every frame (typically 1/60[s] for 60Hz display).
 func (g *Game) Draw(screen *e.Image) {
-	for i := 0; i < 10; i++ {
-		icon := e.NewImage(32, 32)
-		icon.Fill(color.White)
+	for i, p := range g.polygons {
+		icon := p.Icon()
+		w, h := icon.Size()
+		x := (w+(50-w)/2)*i + (50-w)/2
+		y := (50 - h) / 2
+		p.SetRect(image.Rect(x, y, x+w, y+h))
 		icOp := &e.DrawImageOptions{}
-		icOp.GeoM.Translate((32+(50-32)/2)*float64(i)+(50-32)/2, (50-32)/2)
-
+		icOp.GeoM.Translate(float64(x), float64(y))
 		screen.DrawImage(icon, icOp)
 	}
 
@@ -332,4 +383,15 @@ func (g *Game) handleKeyboard(c *websocket.Conn) {
 	}
 
 	g.prevKey = g.lastKey
+}
+
+func (g *Game) handleMouse(conn *websocket.Conn) {
+	x, y := e.CursorPosition()
+	for _, p := range g.polygons {
+		if p.rect.Overlaps(image.Rect(x, y, x+1, y+1)) {
+			p.Hover()
+		} else {
+			p.Over()
+		}
+	}
 }

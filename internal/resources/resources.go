@@ -18,8 +18,13 @@ type Frames struct {
 	image.Config
 }
 
-func LoadAudios() (map[string]io.ReadSeeker, error) {
-	out := map[string]io.ReadSeeker{}
+type Audio struct {
+	Stream io.ReadSeeker
+	Len    int
+}
+
+func LoadAudios() (map[string]*Audio, error) {
+	out := map[string]*Audio{}
 
 	prefix := "/resources/audio"
 
@@ -36,7 +41,10 @@ func LoadAudios() (map[string]io.ReadSeeker, error) {
 			if err != nil {
 				return err
 			}
-			out[filename] = bytes.NewReader(byt)
+			out[filename] = &Audio{
+				Stream: bytes.NewReader(byt),
+				Len:    len(byt),
+			}
 		}
 
 		return nil
