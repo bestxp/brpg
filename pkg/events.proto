@@ -24,8 +24,16 @@ message Unit {
     string skin = 4;
     string action = 5;
     double speed = 6;
+
     Direction direction = 7;
     Direction side = 8;
+
+    CharInfo info = 9;
+}
+
+message CharInfo {
+    int64 MaxHealth = 1;
+    int64 CurrentHealth = 2;
 }
 
 message Event {

@@ -47,7 +47,10 @@ func (world *World) AddPlayer() string {
 		Skin:   skins[rnd.Intn(len(skins))],
 		Action: actions.UnitIdle.String(),
 		Speed:  1,
-
+		Info: &pkg.CharInfo{
+			MaxHealth:     100,
+			CurrentHealth: 85,
+		},
 		Pos: &pkg.Pos{
 			X:     level.StartPos.X,
 			Y:     level.StartPos.Y,

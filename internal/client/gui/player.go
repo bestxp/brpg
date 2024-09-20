@@ -4,6 +4,7 @@ import (
 	"github.com/bestxp/brpg/internal/resources"
 	"github.com/bestxp/brpg/pkg"
 	e "github.com/hajimehoshi/ebiten/v2"
+	"image/color"
 )
 
 var frames map[string]resources.Frames
@@ -49,7 +50,31 @@ func (p *Player) updateImg() {
 			op.GeoM.Translate(float64(p.skin.Config.Width), 0)
 		}
 		skin := e.NewImageFromImage(p.skin.Frames[(p.frame/7+int(p.unit.Frame))%4])
-		p.img.DrawImage(skin, op)
+		p.Entity.img.DrawImage(skin, op)
+
+		var (
+			percentBarWidth   = p.skin.Config.Width - 6
+			percentBarHeight  = 4
+			percentBarPadding = 1
+		)
+
+		healthBar := e.NewImage(percentBarWidth, percentBarHeight)
+		healthBar.Fill(color.RGBA{A: 255})
+
+		percent := float64(p.unit.Info.CurrentHealth) / float64(p.unit.Info.MaxHealth)
+		percent = float64(percentBarWidth-percentBarPadding*2) * percent
+
+		currHealth := e.NewImage(int(percent), percentBarHeight-percentBarPadding*2)
+		currHealth.Fill(color.RGBA{R: 255, A: 255})
+
+		currHealthOp := &e.DrawImageOptions{}
+		currHealthOp.GeoM.Translate(float64(percentBarPadding), float64(percentBarPadding))
+
+		healthBar.DrawImage(currHealth, currHealthOp)
+
+		hbOpt := &e.DrawImageOptions{}
+		hbOpt.GeoM.Translate(float64(p.skin.Config.Width-percentBarWidth)/2, 0)
+		p.Entity.img.DrawImage(healthBar, hbOpt)
 	}
 }
 
