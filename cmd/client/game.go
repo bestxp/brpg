@@ -2,14 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/hajimehoshi/ebiten/v2/audio/mp3"
-	"image"
-	"image/color"
-	"log"
-	"sort"
-
 	"github.com/bestxp/brpg/internal/actions"
 	"github.com/bestxp/brpg/internal/client/camera"
+	"github.com/bestxp/brpg/internal/client/gui"
 	"github.com/bestxp/brpg/internal/game"
 	"github.com/bestxp/brpg/internal/level/levels"
 	"github.com/bestxp/brpg/internal/resources"
@@ -18,7 +13,12 @@ import (
 	"github.com/gorilla/websocket"
 	e "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
+	"github.com/hajimehoshi/ebiten/v2/audio/mp3"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"image/color"
+	"log"
+	"sort"
 )
 
 // Game implements ebiten.Game interface.
@@ -36,47 +36,9 @@ type Game struct {
 
 	showDebug bool
 
-	polygons []*Poly
-}
+	guiElements []*gui.Icon
 
-type Poly struct {
-	rect image.Rectangle
-	icon *e.Image
-
-	hovered bool
-}
-
-func (p *Poly) Icon() *e.Image {
-	if p.icon == nil {
-		p.icon = e.NewImage(32, 32)
-		p.icon.Fill(color.White)
-	}
-
-	return p.icon
-}
-
-func (p *Poly) Hover() {
-	if !p.hovered {
-		p.icon.Fill(color.RGBA{
-			R: 255,
-			G: 0,
-			B: 0,
-			A: 255,
-		})
-		p.hovered = true
-	}
-
-}
-
-func (p *Poly) Over() {
-	if p.hovered {
-		p.icon.Fill(color.White)
-		p.hovered = false
-	}
-}
-
-func (p *Poly) SetRect(r image.Rectangle) {
-	p.rect = r
+	players []*gui.Player
 }
 
 func NewGame(c *websocket.Conn, w *game.World) *Game {
@@ -103,17 +65,19 @@ func NewGame(c *websocket.Conn, w *game.World) *Game {
 		if err != nil {
 			panic(err)
 		}
-		p.SetVolume(0.5)
+		p.SetVolume(0.33)
 		p.Play()
 
 	} else {
 		println("no track")
 	}
 
-	g.polygons = make([]*Poly, 0, 100)
+	g.guiElements = make([]*gui.Icon, 0, 100)
 	for i := 0; i < 10; i++ {
-		g.polygons = append(g.polygons, &Poly{})
+		g.guiElements = append(g.guiElements, gui.NewIcon())
 	}
+
+	g.players = make([]*gui.Player, 0)
 
 	return g
 }
@@ -126,7 +90,7 @@ func (g *Game) Update() error {
 	g.handleMouse(g.Conn)
 	w, h := e.WindowSize()
 	// @todo calc by dx dy of sprite
-	g.Camera.FollowTarget(world.Me().Pos.X-8, world.Me().Pos.Y-8, float64(w), float64(h-100), 0, 50)
+	g.Camera.FollowTarget(world.Me().Pos.X, world.Me().Pos.Y, float64(w), float64(h-100), 0, 50)
 	wmap, _ := world.ActiveClientWorld().EImage()
 	wmapW, wmapH := wmap.Size()
 	ww, wh := e.WindowSize()
@@ -136,59 +100,50 @@ func (g *Game) Update() error {
 		float64(ww),
 		float64(wh-100),
 	)
+
+	g.players = g.players[0:0]
+	for _, unit := range g.world.Units {
+		if unit.Pos.Level != g.world.Me().Pos.Level {
+			continue
+		}
+		g.players = append(g.players, gui.NewPlayerFromServer(unit))
+	}
+
 	return nil
 }
 
 func (g *Game) DrawGUI(screen *e.Image) {
-	g.frame++
-
-	sprites := []Sprite{}
-	for _, unit := range g.world.Units {
-		if unit.Pos.GetLevel() == g.world.Me().Pos.GetLevel() {
-			sprites = append(sprites, Sprite{
-				Frames: frames[unit.Skin+"_"+unit.Action].Frames,
-				Frame:  int(unit.Frame),
-				X:      unit.Pos.X,
-				Y:      unit.Pos.Y,
-				Side:   unit.Side,
-				Config: frames[unit.Skin+"_"+unit.Action].Config,
-			})
-		}
+	for _, pl := range g.players {
+		pl.SetFrame(g.frame)
+		pl.DrawAt(screen, pl.X+g.Camera.X, pl.Y+g.Camera.Y)
 	}
 
-	sort.Slice(sprites, func(i, j int) bool {
-		depth1 := sprites[i].Y + float64(sprites[i].Config.Height)
-		depth2 := sprites[j].Y + float64(sprites[j].Config.Height)
+	sort.Slice(g.players, func(i, j int) bool {
+		_, h1 := g.players[i].Size()
+		depth1 := g.players[i].Y + float64(h1)
+		_, h2 := g.players[j].Size()
+		depth2 := g.players[j].Y + float64(h2)
 		return depth1 < depth2
 	})
-
-	for _, sprite := range sprites {
-		op := &e.DrawImageOptions{}
-
-		if sprite.Side == pkg.Direction_left {
-			op.GeoM.Scale(-1, 1)
-			op.GeoM.Translate(float64(sprite.Config.Width), 0)
-		}
-
-		op.GeoM.Translate(sprite.X+g.Camera.X, sprite.Y+g.Camera.Y)
-
-		img := e.NewImageFromImage(sprite.Frames[(g.frame/7+sprite.Frame)%4])
-		screen.DrawImage(img, op)
-	}
 }
 
 // Draw draws the game screen.
 // Draw is called every frame (typically 1/60[s] for 60Hz display).
 func (g *Game) Draw(screen *e.Image) {
-	for i, p := range g.polygons {
-		icon := p.Icon()
-		w, h := icon.Size()
+	g.frame++
+	defer func() {
+		if g.frame > 60 {
+			g.frame = 0
+		}
+	}()
+
+	for i, p := range g.guiElements {
+		w, h := p.Size()
+
 		x := (w+(50-w)/2)*i + (50-w)/2
 		y := (50 - h) / 2
-		p.SetRect(image.Rect(x, y, x+w, y+h))
-		icOp := &e.DrawImageOptions{}
-		icOp.GeoM.Translate(float64(x), float64(y))
-		screen.DrawImage(icon, icOp)
+		p.SetFrame(g.frame)
+		p.DrawAt(screen, float64(x), float64(y))
 	}
 
 	w, h := e.WindowSize()
@@ -387,11 +342,33 @@ func (g *Game) handleKeyboard(c *websocket.Conn) {
 
 func (g *Game) handleMouse(conn *websocket.Conn) {
 	x, y := e.CursorPosition()
-	for _, p := range g.polygons {
-		if p.rect.Overlaps(image.Rect(x, y, x+1, y+1)) {
-			p.Hover()
-		} else {
-			p.Over()
+	for _, p := range g.guiElements {
+		if p.TryHover(x, y) {
+			if inpututil.IsMouseButtonJustPressed(e.MouseButtonRight) {
+				p.HandleClick(e.MouseButtonRight)
+			}
+			if inpututil.IsMouseButtonJustPressed(e.MouseButtonLeft) {
+				p.HandleClick(e.MouseButtonLeft)
+			}
+			if inpututil.IsMouseButtonJustPressed(e.MouseButtonMiddle) {
+				p.HandleClick(e.MouseButtonMiddle)
+			}
 		}
 	}
+
+	for _, p := range g.players {
+		// 50px shift of interfaces of game drawing
+		if p.TryHover(x, y-50) {
+			if inpututil.IsMouseButtonJustPressed(e.MouseButtonRight) {
+				p.HandleClick(e.MouseButtonRight)
+			}
+			if inpututil.IsMouseButtonJustPressed(e.MouseButtonLeft) {
+				p.HandleClick(e.MouseButtonLeft)
+			}
+			if inpututil.IsMouseButtonJustPressed(e.MouseButtonMiddle) {
+				p.HandleClick(e.MouseButtonMiddle)
+			}
+		}
+	}
+
 }
