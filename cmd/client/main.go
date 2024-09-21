@@ -1,7 +1,6 @@
 package main
 
 import (
-	"image"
 	"log"
 	"os"
 
@@ -18,21 +17,6 @@ type Config struct {
 	title  string
 	width  int
 	height int
-	scale  int
-}
-
-type Sprite struct {
-	Frames []image.Image
-	Frame  int
-	X      float64
-	Y      float64
-	Side   pkg.Direction
-	Config image.Config
-}
-
-type Camera struct {
-	X float64
-	Y float64
 }
 
 var world *game.World
@@ -45,12 +29,11 @@ func init() {
 		title:  "Just Dungeon",
 		width:  1024,
 		height: 768,
-		scale:  2,
 	}
 
 	world = &game.World{
-		Replica: true,
-		Units:   map[string]*pkg.Unit{},
+		IsClient: true,
+		Units:    map[string]*pkg.Unit{},
 	}
 
 	var err error

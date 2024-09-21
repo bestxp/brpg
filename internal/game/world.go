@@ -14,10 +14,12 @@ import (
 
 // World represents game state
 type World struct {
-	Replica bool
-	Units   map[string]*pkg.Unit
-	MyID    string
-	Levels  map[levels.LevelName]*level.Level
+	IsClient bool
+	Units    map[string]*pkg.Unit
+	MyID     string
+	Levels   map[levels.LevelName]*level.Level
+
+	unitTick uint8
 }
 
 func (world *World) Me() *pkg.Unit {
@@ -76,7 +78,7 @@ func (world *World) HandleEvent(event *pkg.Event) {
 
 	case pkg.Event_type_init:
 		data := event.GetInit()
-		if world.Replica {
+		if world.IsClient {
 			world.MyID = data.PlayerId
 			world.Units = data.Units
 		}
@@ -101,50 +103,68 @@ func (world *World) HandleEvent(event *pkg.Event) {
 	}
 }
 
+func (world *World) tickUnits() {
+	world.unitTick++
+	defer func() {
+		if world.unitTick > 60 {
+			world.unitTick = 0
+		}
+	}()
+	for _, unit := range world.Units {
+		if world.IsClient && world.Me().Pos.GetLevel() != unit.Pos.GetLevel() {
+			continue
+		}
+		// todo server only logic
+		if world.unitTick == 60 {
+			unit.Info.CurrentHealth++
+			if unit.Info.CurrentHealth > unit.Info.MaxHealth {
+				unit.Info.CurrentHealth = unit.Info.MaxHealth
+			}
+		}
+
+		if unit.Action == actions.UnitMove.String() {
+			side := unit.Side
+			posTo := level.Pos{X: unit.Pos.X, Y: unit.Pos.Y}
+
+			switch unit.Direction {
+			case pkg.Direction_left:
+				posTo.X -= unit.Speed
+				side = pkg.Direction_left
+			case pkg.Direction_right:
+				posTo.X += unit.Speed
+				side = pkg.Direction_right
+			case pkg.Direction_up:
+				posTo.Y -= unit.Speed
+			case pkg.Direction_down:
+				posTo.Y += unit.Speed
+			default:
+				log.Println("UNKNOWN DIRECTION: ", unit.Direction)
+			}
+
+			lvl, err := levels.LevelName(unit.Pos.Level).Level()
+			if err != nil {
+				log.Println("UNKNOWN level")
+				return
+			}
+
+			posTo = lvl.WalkCalc(level.Vector{
+				From: level.Pos{X: unit.Pos.X, Y: unit.Pos.Y},
+				To:   posTo,
+			})
+			unit.Side = side
+			unit.Pos.X = posTo.X
+			unit.Pos.Y = posTo.Y
+		}
+	}
+}
+
 func (world *World) Evolve() {
 	ticker := time.NewTicker(time.Second / 60)
 
 	for {
 		select {
 		case <-ticker.C:
-			for _, unit := range world.Units {
-				if world.Replica && world.Me().Pos.GetLevel() != unit.Pos.GetLevel() {
-					continue
-				}
-				if unit.Action == actions.UnitMove.String() {
-					side := unit.Side
-					posTo := level.Pos{X: unit.Pos.X, Y: unit.Pos.Y}
-
-					switch unit.Direction {
-					case pkg.Direction_left:
-						posTo.X -= unit.Speed
-						side = pkg.Direction_left
-					case pkg.Direction_right:
-						posTo.X += unit.Speed
-						side = pkg.Direction_right
-					case pkg.Direction_up:
-						posTo.Y -= unit.Speed
-					case pkg.Direction_down:
-						posTo.Y += unit.Speed
-					default:
-						log.Println("UNKNOWN DIRECTION: ", unit.Direction)
-					}
-
-					lvl, err := levels.LevelName(unit.Pos.Level).Level()
-					if err != nil {
-						log.Println("UNKNOWN level")
-						return
-					}
-
-					posTo = lvl.WalkCalc(level.Vector{
-						From: level.Pos{X: unit.Pos.X, Y: unit.Pos.Y},
-						To:   posTo,
-					})
-					unit.Side = side
-					unit.Pos.X = posTo.X
-					unit.Pos.Y = posTo.Y
-				}
-			}
+			world.tickUnits()
 		}
 	}
 }

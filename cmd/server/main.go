@@ -11,8 +11,8 @@ var world *game.World
 
 func init() {
 	world = &game.World{
-		Replica: false,
-		Units:   map[string]*engine.Unit{},
+		IsClient: false,
+		Units:    map[string]*engine.Unit{},
 	}
 }
 
