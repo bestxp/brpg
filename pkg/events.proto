@@ -45,6 +45,7 @@ message Event {
         type_move = 4;
         type_empty = 5;
         type_teleport = 6;
+        type_updateinfo = 7;
     }
     Type type = 1;
     oneof data {
@@ -54,7 +55,13 @@ message Event {
         EventIdle idle = 5;
         EventMove move = 6;
         EventTeleport teleport = 7;
+        UpdateInfo updateInfo = 8;
     }
+}
+
+message UpdateInfo {
+    string unit_id = 1;
+    CharInfo info = 2;
 }
 
 message EventInit {

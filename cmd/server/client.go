@@ -1,13 +1,13 @@
 package main
 
 import (
+	"github.com/bestxp/brpg/internal/infra/network"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/bestxp/brpg/internal/game"
 	engine "github.com/bestxp/brpg/pkg"
-	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
 )
 
@@ -34,8 +34,8 @@ var upgrader = websocket.Upgrader{
 type Client struct {
 	id   string
 	hub  *Hub
-	conn *websocket.Conn
-	send chan []byte
+	conn *network.Network
+	send chan *engine.Event
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -51,33 +51,25 @@ func (c *Client) readPump(world *game.World) {
 				Exit: &engine.EventExit{PlayerId: c.id},
 			},
 		}
-		message, err := proto.Marshal(event)
-		if err != nil {
-			log.Println(err)
-		}
 		world.HandleEvent(event)
-		c.hub.broadcast <- message
+		c.hub.broadcast <- event
 
 		c.hub.unregister <- c
 		c.conn.Close()
 	}()
-	c.conn.SetReadLimit(maxMessageSize)
-	c.conn.SetReadDeadline(time.Now().Add(pongWait))
-	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	c.conn.Conn.SetReadLimit(maxMessageSize)
+	c.conn.Conn.SetReadDeadline(time.Now().Add(pongWait))
+	c.conn.Conn.SetPongHandler(func(string) error { c.conn.Conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+
 	for {
-		_, message, err := c.conn.ReadMessage()
+		_, event, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
 			break
 		}
-		c.hub.broadcast <- message // ?
-		event := &engine.Event{}
-		err = proto.Unmarshal(message, event)
-		if err != nil {
-			log.Println(err)
-		}
+		c.hub.broadcast <- event // ?
 		world.HandleEvent(event)
 	}
 }
@@ -99,20 +91,20 @@ func (c *Client) writePump() {
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The hub closed the channel.
-				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				c.conn.CloseMessage()
 				return
 			}
 
-			w, err := c.conn.NextWriter(websocket.BinaryMessage)
+			w, err := c.conn.BathBinary()
 			if err != nil {
 				return
 			}
-			w.Write(message)
+			w.Send(message)
 
 			// Add queued chat messages to the current websocket message.
 			n := len(c.send)
 			for i := 0; i < n; i++ {
-				w.Write(<-c.send)
+				w.Send(<-c.send)
 			}
 
 			if err := w.Close(); err != nil {
@@ -120,7 +112,7 @@ func (c *Client) writePump() {
 			}
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			if err := c.conn.PingMessage(); err != nil {
 				return
 			}
 		}
@@ -134,9 +126,10 @@ func serveWs(hub *Hub, world *game.World, w http.ResponseWriter, r *http.Request
 		log.Println(err)
 		return
 	}
+	net := network.NewNetwork(conn)
 
 	id := world.AddPlayer()
-	client := &Client{id: id, hub: hub, conn: conn, send: make(chan []byte, 256)}
+	client := &Client{id: id, hub: hub, conn: net, send: make(chan *engine.Event, 256)}
 	client.hub.register <- client
 
 	event := &engine.Event{
@@ -148,12 +141,11 @@ func serveWs(hub *Hub, world *game.World, w http.ResponseWriter, r *http.Request
 			},
 		},
 	}
-	message, err := proto.Marshal(event)
+	err = net.Send(event)
 	if err != nil {
 		//todo: remove unit
 		log.Println(err)
 	}
-	conn.WriteMessage(websocket.BinaryMessage, message)
 
 	unit := world.Units[id]
 	event = &engine.Event{
@@ -162,12 +154,7 @@ func serveWs(hub *Hub, world *game.World, w http.ResponseWriter, r *http.Request
 			Connect: &engine.EventConnect{Unit: unit},
 		},
 	}
-	message, err = proto.Marshal(event)
-	if err != nil {
-		//todo: remove unit
-		log.Println(err)
-	}
-	hub.broadcast <- message
+	hub.broadcast <- event
 
 	// Allow collection of memory referenced by the caller by doing all work
 	// in new goroutines.

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/bestxp/brpg/internal/infra/network"
 	"log"
 	"os"
 
@@ -8,7 +9,6 @@ import (
 	"github.com/bestxp/brpg/internal/level/levels"
 	"github.com/bestxp/brpg/internal/resources"
 	"github.com/bestxp/brpg/pkg"
-	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
 	e "github.com/hajimehoshi/ebiten/v2"
 )
@@ -50,8 +50,8 @@ func main() {
 
 	host := getEnv("HOST", "localhost")
 	c, _, _ := websocket.DefaultDialer.Dial("ws://"+host+":3000/ws", nil)
-
-	game := NewGame(c, world)
+	n := network.NewNetwork(c)
+	game := NewGame(n, world)
 
 	if err != nil {
 		log.Fatal(err)
@@ -61,13 +61,7 @@ func main() {
 		defer c.Close()
 
 		for {
-			_, message, err := c.ReadMessage()
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			event := &pkg.Event{}
-			err = proto.Unmarshal(message, event)
+			_, event, err := n.ReadMessage()
 			if err != nil {
 				log.Fatal(err)
 			}

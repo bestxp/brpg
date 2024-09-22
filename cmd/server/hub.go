@@ -1,17 +1,20 @@
 package main
 
+import "github.com/bestxp/brpg/pkg"
+
 // Hub maintains the set of active clients and broadcasts messages
 // to the clients.
 type Hub struct {
-	clients    map[*Client]bool
-	broadcast  chan []byte
+	clients   map[*Client]bool
+	broadcast chan *pkg.Event
+
 	register   chan *Client
 	unregister chan *Client
 }
 
 func newHub() *Hub {
 	return &Hub{
-		broadcast:  make(chan []byte, 1),
+		broadcast:  make(chan *pkg.Event, 1),
 		register:   make(chan *Client, 1),
 		unregister: make(chan *Client, 1),
 		clients:    make(map[*Client]bool),

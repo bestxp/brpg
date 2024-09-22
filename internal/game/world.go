@@ -19,7 +19,7 @@ type World struct {
 	MyID     string
 	Levels   map[levels.LevelName]*level.Level
 
-	unitTick uint8
+	tick uint8
 }
 
 func (world *World) Me() *pkg.Unit {
@@ -104,18 +104,12 @@ func (world *World) HandleEvent(event *pkg.Event) {
 }
 
 func (world *World) tickUnits() {
-	world.unitTick++
-	defer func() {
-		if world.unitTick > 60 {
-			world.unitTick = 0
-		}
-	}()
 	for _, unit := range world.Units {
 		if world.IsClient && world.Me().Pos.GetLevel() != unit.Pos.GetLevel() {
 			continue
 		}
 		// todo server only logic
-		if world.unitTick == 60 {
+		if world.tick == 60 {
 			unit.Info.CurrentHealth++
 			if unit.Info.CurrentHealth > unit.Info.MaxHealth {
 				unit.Info.CurrentHealth = unit.Info.MaxHealth
@@ -160,11 +154,15 @@ func (world *World) tickUnits() {
 
 func (world *World) Evolve() {
 	ticker := time.NewTicker(time.Second / 60)
-
 	for {
 		select {
 		case <-ticker.C:
+			world.tick++
 			world.tickUnits()
+
+			if world.tick > 60 {
+				world.tick = 0
+			}
 		}
 	}
 }

@@ -2,6 +2,11 @@ package main
 
 import (
 	"fmt"
+	"github.com/bestxp/brpg/internal/infra/network"
+	"image/color"
+	"log"
+	"sort"
+
 	"github.com/bestxp/brpg/internal/actions"
 	"github.com/bestxp/brpg/internal/client/camera"
 	"github.com/bestxp/brpg/internal/client/gui"
@@ -9,21 +14,16 @@ import (
 	"github.com/bestxp/brpg/internal/level/levels"
 	"github.com/bestxp/brpg/internal/resources"
 	"github.com/bestxp/brpg/pkg"
-	"github.com/golang/protobuf/proto"
-	"github.com/gorilla/websocket"
 	e "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/audio/mp3"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"image/color"
-	"log"
-	"sort"
 )
 
 // Game implements ebiten.Game interface.
 type Game struct {
-	Conn *websocket.Conn
+	Conn *network.Network
 
 	gui *e.Image
 
@@ -41,7 +41,7 @@ type Game struct {
 	players []*gui.Player
 }
 
-func NewGame(c *websocket.Conn, w *game.World) *Game {
+func NewGame(c *network.Network, w *game.World) *Game {
 	g := &Game{
 		Conn:   c,
 		world:  w,
@@ -86,8 +86,8 @@ func NewGame(c *websocket.Conn, w *game.World) *Game {
 // Update is called every tick (1/60 [s] by default).
 func (g *Game) Update() error {
 	// Write your game's logical update.
-	g.handleKeyboard(g.Conn)
-	g.handleMouse(g.Conn)
+	g.handleKeyboard()
+	g.handleMouse()
 	w, h := e.WindowSize()
 	// @todo calc by dx dy of sprite
 	g.Camera.FollowTarget(world.Me().Pos.X, world.Me().Pos.Y, float64(w), float64(h-100), 0, 50)
@@ -193,7 +193,7 @@ func (g *Game) Layout(_, _ int) (screenWidth, screenHeight int) {
 	return e.WindowSize()
 }
 
-func (g *Game) handleKeyboard(c *websocket.Conn) {
+func (g *Game) handleKeyboard() {
 	event := &pkg.Event{}
 
 	if e.IsKeyPressed(e.KeyV) && g.lastKey != e.KeyV {
@@ -305,20 +305,18 @@ func (g *Game) handleKeyboard(c *websocket.Conn) {
 
 	if event.Type == pkg.Event_type_move {
 		if g.prevKey != g.lastKey {
-			message, err := proto.Marshal(event)
+			err := g.Conn.Send(event)
 			if err != nil {
 				log.Println(err)
 				return
 			}
-			c.WriteMessage(websocket.BinaryMessage, message)
 		}
 	} else if event.Type == pkg.Event_type_teleport {
-		message, err := proto.Marshal(event)
+		err := g.Conn.Send(event)
 		if err != nil {
 			log.Println(err)
 			return
 		}
-		c.WriteMessage(websocket.BinaryMessage, message)
 	} else {
 		if unit.Action != actions.UnitIdle.String() {
 			event = &pkg.Event{
@@ -327,12 +325,11 @@ func (g *Game) handleKeyboard(c *websocket.Conn) {
 					Idle: &pkg.EventIdle{PlayerId: world.MyID},
 				},
 			}
-			message, err := proto.Marshal(event)
+			err := g.Conn.Send(event)
 			if err != nil {
 				log.Println(err)
 				return
 			}
-			c.WriteMessage(websocket.BinaryMessage, message)
 			g.lastKey = -1
 		}
 	}
@@ -340,7 +337,7 @@ func (g *Game) handleKeyboard(c *websocket.Conn) {
 	g.prevKey = g.lastKey
 }
 
-func (g *Game) handleMouse(conn *websocket.Conn) {
+func (g *Game) handleMouse() {
 	x, y := e.CursorPosition()
 	for _, p := range g.guiElements {
 		if p.TryHover(x, y) {
