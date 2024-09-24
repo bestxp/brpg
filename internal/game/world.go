@@ -22,6 +22,13 @@ type World struct {
 	tick uint8
 }
 
+func NewWorld(client bool) *World {
+	return &World{
+		IsClient: client,
+		Units:    make(map[string]*pkg.Unit, 0),
+	}
+}
+
 func (world *World) Me() *pkg.Unit {
 	return world.Units[world.MyID]
 }

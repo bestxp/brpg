@@ -3,20 +3,12 @@ package main
 import (
 	"github.com/bestxp/brpg/internal/game"
 	"github.com/bestxp/brpg/internal/level/levels"
-	engine "github.com/bestxp/brpg/pkg"
 	"github.com/gin-gonic/gin"
 )
 
-var world *game.World
-
-func init() {
-	world = &game.World{
-		IsClient: false,
-		Units:    map[string]*engine.Unit{},
-	}
-}
-
 func main() {
+	var world = game.NewWorld(false)
+
 	levels.All()
 	go world.Evolve()
 

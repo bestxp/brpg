@@ -1,15 +1,14 @@
 package main
 
 import (
-	"github.com/bestxp/brpg/internal/infra/network"
 	"log"
 	"os"
 
+	game2 "github.com/bestxp/brpg/internal/client/game"
 	"github.com/bestxp/brpg/internal/game"
+	"github.com/bestxp/brpg/internal/infra/network"
 	"github.com/bestxp/brpg/internal/level/levels"
-	"github.com/bestxp/brpg/internal/resources"
 	"github.com/bestxp/brpg/pkg"
-	"github.com/gorilla/websocket"
 	e "github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -19,45 +18,33 @@ type Config struct {
 	height int
 }
 
-var world *game.World
-
-var config *Config
-var frames map[string]resources.Frames
-
-func init() {
-	config = &Config{
+func main() {
+	config := &Config{
 		title:  "Just Dungeon",
 		width:  1024,
 		height: 768,
 	}
+	e.SetRunnableOnUnfocused(true)
+	e.SetWindowSize(config.width, config.height)
+	e.SetWindowTitle(config.title)
+	e.SetWindowResizingMode(e.WindowResizingModeEnabled)
 
-	world = &game.World{
-		IsClient: true,
-		Units:    map[string]*pkg.Unit{},
-	}
-
+	world := game.NewWorld(true)
 	var err error
-	frames, err = resources.LoadResources()
-	if err != nil {
-		log.Fatal(err)
-	}
-}
 
-func main() {
 	levels.All()
 	go world.Evolve()
-	var err error
 
 	host := getEnv("HOST", "localhost")
-	c, _, _ := websocket.DefaultDialer.Dial("ws://"+host+":3000/ws", nil)
-	n := network.NewNetwork(c)
-	game := NewGame(n, world)
+
+	n := network.FromHost(host)
+	gg := game2.NewGame(n, world)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	go func(c *websocket.Conn) {
+	go func(c *network.Network) {
 		defer c.Close()
 
 		for {
@@ -69,17 +56,12 @@ func main() {
 			world.HandleEvent(event)
 
 			if event.Type == pkg.Event_type_connect {
-				game.Camera.InitCoords(world.Me().Pos.X, world.Me().Pos.Y)
+				gg.Camera.InitCoords(world.Me().Pos.X, world.Me().Pos.Y)
 			}
 		}
-	}(c)
+	}(n)
 
-	e.SetRunnableOnUnfocused(true)
-	e.SetWindowSize(config.width, config.height)
-	e.SetWindowTitle(config.title)
-	e.SetWindowResizable(true)
-
-	if err := e.RunGame(game); err != nil {
+	if err := e.RunGame(gg); err != nil {
 		log.Fatal(err)
 	}
 }

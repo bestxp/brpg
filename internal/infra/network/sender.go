@@ -41,6 +41,11 @@ type MessageSender interface {
 	Close() error
 }
 
+func FromHost(host string) *Network {
+	c, _, _ := websocket.DefaultDialer.Dial("ws://"+host+":3000/ws", nil)
+	return NewNetwork(c)
+}
+
 func NewNetwork(c *websocket.Conn) *Network {
 	return &Network{Conn: c}
 }

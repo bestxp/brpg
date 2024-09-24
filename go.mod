@@ -1,30 +1,38 @@
 module github.com/bestxp/brpg
 
-go 1.22
+go 1.22.0
+
+toolchain go1.22.7
 
 require (
 	github.com/gin-gonic/gin v1.9.0
 	github.com/go-playground/assert/v2 v2.2.0
-	github.com/golang/protobuf v1.5.4
 	github.com/gorilla/websocket v1.4.1
-	github.com/hajimehoshi/ebiten/v2 v2.0.2
+	github.com/hajimehoshi/ebiten/v2 v2.7.10
 	github.com/markbates/pkger v0.17.1
 	github.com/satori/go.uuid v1.2.0
+	golang.org/x/image v0.20.0
 	google.golang.org/protobuf v1.33.0
 )
 
 require (
 	github.com/bytedance/sonic v1.8.0 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
+	github.com/ebitengine/gomobile v0.0.0-20240911145611-4856209ac325 // indirect
+	github.com/ebitengine/hideconsole v1.0.0 // indirect
+	github.com/ebitengine/oto/v3 v3.2.0 // indirect
+	github.com/ebitengine/purego v0.7.1 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
-	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20200707082815-5321531c36a2 // indirect
+	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20240506104042-037f3cc74f2a // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.11.2 // indirect
+	github.com/go-text/typesetting v0.1.1-0.20240325125605-c7936fe59984 // indirect
 	github.com/gobuffalo/here v0.6.0 // indirect
 	github.com/goccy/go-json v0.10.0 // indirect
-	github.com/hajimehoshi/go-mp3 v0.3.1 // indirect
-	github.com/hajimehoshi/oto v0.6.8 // indirect
+	github.com/hajimehoshi/ebiten v1.12.12 // indirect
+	github.com/hajimehoshi/go-mp3 v0.3.4 // indirect
+	github.com/jezek/xgb v1.1.1 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
@@ -37,11 +45,12 @@ require (
 	golang.org/x/arch v0.0.0-20210923205945-b76863e36670 // indirect
 	golang.org/x/crypto v0.5.0 // indirect
 	golang.org/x/exp v0.0.0-20190731235908-ec7cb31e5a56 // indirect
-	golang.org/x/image v0.0.0-20200927104501-e162460cd6b5 // indirect
-	golang.org/x/mobile v0.0.0-20200801112145-973feb4309de // indirect
+	golang.org/x/exp/shiny v0.0.0-20240909161429-701f63a606c0 // indirect
+	golang.org/x/mobile v0.0.0-20240909163608-642950227fb3 // indirect
 	golang.org/x/net v0.7.0 // indirect
-	golang.org/x/sys v0.5.0 // indirect
-	golang.org/x/text v0.7.0 // indirect
+	golang.org/x/sync v0.8.0 // indirect
+	golang.org/x/sys v0.25.0 // indirect
+	golang.org/x/text v0.18.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 

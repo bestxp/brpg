@@ -1,16 +1,15 @@
-package main
+package game
 
 import (
 	"fmt"
-	"github.com/bestxp/brpg/internal/infra/network"
-	"image/color"
 	"log"
-	"sort"
 
 	"github.com/bestxp/brpg/internal/actions"
 	"github.com/bestxp/brpg/internal/client/camera"
 	"github.com/bestxp/brpg/internal/client/gui"
+	"github.com/bestxp/brpg/internal/client/scene"
 	"github.com/bestxp/brpg/internal/game"
+	"github.com/bestxp/brpg/internal/infra/network"
 	"github.com/bestxp/brpg/internal/level/levels"
 	"github.com/bestxp/brpg/internal/resources"
 	"github.com/bestxp/brpg/pkg"
@@ -35,10 +34,9 @@ type Game struct {
 	audioContext *audio.Context
 
 	showDebug bool
+	players   []*gui.Player
 
-	guiElements []*gui.Icon
-
-	players []*gui.Player
+	scene scene.Scene
 }
 
 func NewGame(c *network.Network, w *game.World) *Game {
@@ -55,13 +53,13 @@ func NewGame(c *network.Network, w *game.World) *Game {
 	track := au["/resources/audio/bg.mp3"]
 	if track != nil {
 
-		s, err := mp3.Decode(g.audioContext, track.Stream)
+		s, err := mp3.DecodeWithSampleRate(44100, track.Stream)
 		if err != nil {
 			panic(err)
 		}
 		loop := audio.NewInfiniteLoop(s, s.Length())
 
-		p, err := audio.NewPlayer(g.audioContext, loop)
+		p, err := g.audioContext.NewPlayer(loop)
 		if err != nil {
 			panic(err)
 		}
@@ -72,12 +70,15 @@ func NewGame(c *network.Network, w *game.World) *Game {
 		println("no track")
 	}
 
-	g.guiElements = make([]*gui.Icon, 0, 100)
-	for i := 0; i < 10; i++ {
-		g.guiElements = append(g.guiElements, gui.NewIcon())
-	}
-
 	g.players = make([]*gui.Player, 0)
+
+	s := scene.NewWelcomeScene()
+	s.OnClick("login", scene.Click, func() error {
+		g.scene = scene.NewGameScene(g.world)
+		return nil
+	})
+
+	g.scene = s
 
 	return g
 }
@@ -88,43 +89,9 @@ func (g *Game) Update() error {
 	// Write your game's logical update.
 	g.handleKeyboard()
 	g.handleMouse()
-	w, h := e.WindowSize()
-	// @todo calc by dx dy of sprite
-	g.Camera.FollowTarget(world.Me().Pos.X, world.Me().Pos.Y, float64(w), float64(h-100), 0, 50)
-	wmap, _ := world.ActiveClientWorld().EImage()
-	wmapW, wmapH := wmap.Size()
-	ww, wh := e.WindowSize()
-	g.Camera.Constrain(
-		float64(wmapW),
-		float64(wmapH),
-		float64(ww),
-		float64(wh-100),
-	)
-
-	g.players = g.players[0:0]
-	for _, unit := range g.world.Units {
-		if unit.Pos.Level != g.world.Me().Pos.Level {
-			continue
-		}
-		g.players = append(g.players, gui.NewPlayerFromServer(unit))
-	}
+	g.scene.Update()
 
 	return nil
-}
-
-func (g *Game) DrawGUI(screen *e.Image) {
-	for _, pl := range g.players {
-		pl.SetFrame(g.frame)
-		pl.DrawAt(screen, pl.X+g.Camera.X, pl.Y+g.Camera.Y)
-	}
-
-	sort.Slice(g.players, func(i, j int) bool {
-		_, h1 := g.players[i].Size()
-		depth1 := g.players[i].Y + float64(h1)
-		_, h2 := g.players[j].Size()
-		depth2 := g.players[j].Y + float64(h2)
-		return depth1 < depth2
-	})
 }
 
 // Draw draws the game screen.
@@ -137,48 +104,19 @@ func (g *Game) Draw(screen *e.Image) {
 		}
 	}()
 
-	for i, p := range g.guiElements {
-		w, h := p.Size()
-
-		x := (w+(50-w)/2)*i + (50-w)/2
-		y := (50 - h) / 2
-		p.SetFrame(g.frame)
-		p.DrawAt(screen, float64(x), float64(y))
-	}
-
-	w, h := e.WindowSize()
-	g.gui = e.NewImage(w, h-100)
-	g.gui.Fill(color.RGBA{
-		R: 90,
-		G: 90,
-		B: 90,
-		A: 255,
-	})
-
-	// render world tiles
-	worldOp := &e.DrawImageOptions{}
-	worldOp.GeoM.Translate(g.Camera.X, g.Camera.Y)
-	worldMap, err := g.world.ActiveClientWorld().EImage()
-	if err != nil {
-		panic(err)
-	}
-	g.gui.DrawImage(worldMap, worldOp)
-	g.DrawGUI(g.gui)
-
-	guiOp := &e.DrawImageOptions{}
-	guiOp.GeoM.Translate(0, 50)
-	screen.DrawImage(g.gui, guiOp)
+	g.scene.Frame(g.frame)
+	g.scene.DrawAt(screen)
 
 	if g.showDebug {
 		ebitenutil.DebugPrint(screen,
-			fmt.Sprintf("TPS: %0.2f \n VS: %v \n", e.CurrentTPS(), e.IsVsyncEnabled())+
+			fmt.Sprintf("TPS: %0.2f \n VS: %v \n", e.ActualTPS(), e.IsVsyncEnabled())+
 				g.UnitInfo()+
 				PrintMemUsage())
 	}
 }
 
 func (g *Game) UnitInfo() string {
-	me := world.Me()
+	me := g.world.Me()
 	out := fmt.Sprintf("\n X: %f", me.Pos.X)
 	out += fmt.Sprintf("\n Y: %f", me.Pos.Y)
 	out += fmt.Sprintf("\n Lvl: %s", me.Pos.Level)
@@ -211,7 +149,7 @@ func (g *Game) handleKeyboard() {
 			Type: pkg.Event_type_move,
 			Data: &pkg.Event_Move{
 				Move: &pkg.EventMove{
-					PlayerId:  world.MyID,
+					PlayerId:  g.world.MyID,
 					Direction: pkg.Direction_left,
 				},
 			},
@@ -227,7 +165,7 @@ func (g *Game) handleKeyboard() {
 			Type: pkg.Event_type_teleport,
 			Data: &pkg.Event_Teleport{
 				Teleport: &pkg.EventTeleport{
-					PlayerId: world.MyID,
+					PlayerId: g.world.MyID,
 					Pos: &pkg.Pos{
 						X:     startPos.X,
 						Y:     startPos.Y,
@@ -244,7 +182,7 @@ func (g *Game) handleKeyboard() {
 			Type: pkg.Event_type_teleport,
 			Data: &pkg.Event_Teleport{
 				Teleport: &pkg.EventTeleport{
-					PlayerId: world.MyID,
+					PlayerId: g.world.MyID,
 					Pos: &pkg.Pos{
 						X:     startPos.X,
 						Y:     startPos.Y,
@@ -261,7 +199,7 @@ func (g *Game) handleKeyboard() {
 			Type: pkg.Event_type_move,
 			Data: &pkg.Event_Move{
 				Move: &pkg.EventMove{
-					PlayerId:  world.MyID,
+					PlayerId:  g.world.MyID,
 					Direction: pkg.Direction_right,
 				},
 			},
@@ -276,7 +214,7 @@ func (g *Game) handleKeyboard() {
 			Type: pkg.Event_type_move,
 			Data: &pkg.Event_Move{
 				Move: &pkg.EventMove{
-					PlayerId:  world.MyID,
+					PlayerId:  g.world.MyID,
 					Direction: pkg.Direction_up,
 				},
 			},
@@ -291,7 +229,7 @@ func (g *Game) handleKeyboard() {
 			Type: pkg.Event_type_move,
 			Data: &pkg.Event_Move{
 				Move: &pkg.EventMove{
-					PlayerId:  world.MyID,
+					PlayerId:  g.world.MyID,
 					Direction: pkg.Direction_down,
 				},
 			},
@@ -301,7 +239,7 @@ func (g *Game) handleKeyboard() {
 		}
 	}
 
-	unit := world.Units[world.MyID]
+	unit := g.world.Units[g.world.MyID]
 
 	if event.Type == pkg.Event_type_move {
 		if g.prevKey != g.lastKey {
@@ -322,7 +260,7 @@ func (g *Game) handleKeyboard() {
 			event = &pkg.Event{
 				Type: pkg.Event_type_idle,
 				Data: &pkg.Event_Idle{
-					Idle: &pkg.EventIdle{PlayerId: world.MyID},
+					Idle: &pkg.EventIdle{PlayerId: g.world.MyID},
 				},
 			}
 			err := g.Conn.Send(event)
@@ -339,19 +277,7 @@ func (g *Game) handleKeyboard() {
 
 func (g *Game) handleMouse() {
 	x, y := e.CursorPosition()
-	for _, p := range g.guiElements {
-		if p.TryHover(x, y) {
-			if inpututil.IsMouseButtonJustPressed(e.MouseButtonRight) {
-				p.HandleClick(e.MouseButtonRight)
-			}
-			if inpututil.IsMouseButtonJustPressed(e.MouseButtonLeft) {
-				p.HandleClick(e.MouseButtonLeft)
-			}
-			if inpututil.IsMouseButtonJustPressed(e.MouseButtonMiddle) {
-				p.HandleClick(e.MouseButtonMiddle)
-			}
-		}
-	}
+	g.scene.MouseMove(x, y)
 
 	for _, p := range g.players {
 		// 50px shift of interfaces of game drawing
