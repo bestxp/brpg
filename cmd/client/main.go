@@ -8,7 +8,6 @@ import (
 	"github.com/bestxp/brpg/internal/game"
 	"github.com/bestxp/brpg/internal/infra/network"
 	"github.com/bestxp/brpg/internal/level/levels"
-	"github.com/bestxp/brpg/pkg"
 	e "github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -20,7 +19,7 @@ type Config struct {
 
 func main() {
 	config := &Config{
-		title:  "Just Dungeon",
+		title:  "Monster Dungeon",
 		width:  1024,
 		height: 768,
 	}
@@ -38,28 +37,15 @@ func main() {
 	host := getEnv("HOST", "localhost")
 
 	n := network.FromHost(host)
+	if n == nil {
+		log.Fatal("Can't connect to remote server")
+		return
+	}
 	gg := game2.NewGame(n, world)
 
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	go func(c *network.Network) {
-		defer c.Close()
-
-		for {
-			_, event, err := n.ReadMessage()
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			world.HandleEvent(event)
-
-			if event.Type == pkg.Event_type_connect {
-				gg.Camera.InitCoords(world.Me().Pos.X, world.Me().Pos.Y)
-			}
-		}
-	}(n)
 
 	if err := e.RunGame(gg); err != nil {
 		log.Fatal(err)

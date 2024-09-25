@@ -2,6 +2,8 @@ package game
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/bestxp/brpg/internal/client/camera"
 	"github.com/bestxp/brpg/internal/client/gui"
 	"github.com/bestxp/brpg/internal/client/keyboard"
@@ -9,6 +11,7 @@ import (
 	"github.com/bestxp/brpg/internal/game"
 	"github.com/bestxp/brpg/internal/infra/network"
 	"github.com/bestxp/brpg/internal/resources"
+	"github.com/bestxp/brpg/pkg"
 	e "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/audio/mp3"
@@ -22,10 +25,9 @@ type Game struct {
 
 	gui *e.Image
 
-	Camera           *camera.Camera
-	frame            int
-	world            *game.World
-	lastKey, prevKey e.Key
+	Camera *camera.Camera
+	frame  int
+	world  *game.World
 
 	audioContext *audio.Context
 
@@ -34,6 +36,24 @@ type Game struct {
 
 	scene   scene.Scene
 	welcome scene.Scene
+}
+
+func (g *Game) Run(afterConnectFn func()) {
+	go func(c *network.Network) {
+		defer c.Close()
+
+		for {
+			_, event, err := c.ReadMessage()
+			if err != nil {
+				log.Fatal(err)
+			}
+			if event.Type == pkg.Event_type_connect {
+				g.Camera.InitCoords(g.world.Me().Pos.X, g.world.Me().Pos.Y)
+				afterConnectFn()
+			}
+			g.world.HandleEvent(event)
+		}
+	}(g.Conn)
 }
 
 func NewGame(c *network.Network, w *game.World) *Game {
@@ -54,12 +74,11 @@ func NewGame(c *network.Network, w *game.World) *Game {
 			panic(err)
 		}
 		loop := audio.NewInfiniteLoop(s, s.Length())
-
 		p, err := g.audioContext.NewPlayer(loop)
 		if err != nil {
 			panic(err)
 		}
-		p.SetVolume(0.33)
+		p.SetVolume(0.21)
 		p.Play()
 
 	} else {
@@ -70,7 +89,9 @@ func NewGame(c *network.Network, w *game.World) *Game {
 
 	s := scene.NewWelcomeScene()
 	s.OnClick("login", scene.Click, func() error {
-		g.scene = scene.NewGameScene(g.world, keyboard.NewGameKeyboard(g.world.MyID, g.Conn))
+		g.Run(func() {
+			g.scene = scene.NewGameScene(g.world, keyboard.NewGameKeyboard(g.world.MyID, g.Conn))
+		})
 		return nil
 	})
 
@@ -85,6 +106,7 @@ func NewGame(c *network.Network, w *game.World) *Game {
 func (g *Game) Update() error {
 	// Write your game's logical update.
 	g.handleMouse()
+	g.handleKeyboard()
 	g.scene.Update()
 
 	return nil
@@ -146,4 +168,10 @@ func (g *Game) handleMouse() {
 		}
 	}
 
+}
+
+func (g *Game) handleKeyboard() {
+	if inpututil.IsKeyJustReleased(e.KeyF4) {
+		g.showDebug = !g.showDebug
+	}
 }

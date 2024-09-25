@@ -51,14 +51,19 @@ func NewGameScene(world *game.World, k ...KeyboardInterface) *GameScene {
 }
 
 func (scene *GameScene) Update() {
-	for _, k := range scene.keyboards {
-		if err := k.Handle(); err != nil {
+	lenKey := len(scene.keyboards)
+	for i := 0; i < lenKey; i++ {
+		if err := scene.keyboards[i].Handle(); err != nil {
 			log.Println("keyboard", err.Error())
 		}
 	}
 
 	// @todo calc by dx dy of sprite
 	w, h := e.WindowSize()
+
+	if scene.world.Me() == nil {
+		return
+	}
 
 	scene.camera.FollowTarget(scene.world.Me().Pos.X, scene.world.Me().Pos.Y, float64(w), float64(h-100), 0, 50)
 	wmap, _ := scene.world.ActiveClientWorld().EImage()

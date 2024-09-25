@@ -42,8 +42,16 @@ type MessageSender interface {
 }
 
 func FromHost(host string) *Network {
-	c, _, _ := websocket.DefaultDialer.Dial("ws://"+host+":3000/ws", nil)
-	return NewNetwork(c)
+	for i := 0; i < 10; i++ {
+		c, _, err := websocket.DefaultDialer.Dial("ws://"+host+":3000/ws", nil)
+		if err != nil {
+			time.Sleep(time.Second * time.Duration(i))
+			log.Println("Connection timeout, retry", err.Error())
+		} else {
+			return NewNetwork(c)
+		}
+	}
+	return nil
 }
 
 func NewNetwork(c *websocket.Conn) *Network {

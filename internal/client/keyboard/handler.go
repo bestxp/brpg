@@ -2,6 +2,7 @@ package keyboard
 
 import (
 	"fmt"
+
 	"github.com/bestxp/brpg/internal/infra/network"
 	"github.com/bestxp/brpg/pkg"
 	e "github.com/hajimehoshi/ebiten/v2"
