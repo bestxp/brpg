@@ -41,6 +41,19 @@ type MessageSender interface {
 	Close() error
 }
 
+func FromHost(host string) *Network {
+	for i := 0; i < 10; i++ {
+		c, _, err := websocket.DefaultDialer.Dial("ws://"+host+":3000/ws", nil)
+		if err != nil {
+			time.Sleep(time.Second * time.Duration(i))
+			log.Println("Connection timeout, retry", err.Error())
+		} else {
+			return NewNetwork(c)
+		}
+	}
+	return nil
+}
+
 func NewNetwork(c *websocket.Conn) *Network {
 	return &Network{Conn: c}
 }

@@ -22,6 +22,13 @@ type World struct {
 	tick uint8
 }
 
+func NewWorld(client bool) *World {
+	return &World{
+		IsClient: client,
+		Units:    make(map[string]*pkg.Unit, 0),
+	}
+}
+
 func (world *World) Me() *pkg.Unit {
 	return world.Units[world.MyID]
 }
@@ -95,8 +102,9 @@ func (world *World) HandleEvent(event *pkg.Event) {
 
 	case pkg.Event_type_idle:
 		data := event.GetIdle()
-		unit := world.Units[data.PlayerId]
-		unit.Action = actions.UnitIdle.String()
+		if unit := world.Units[data.PlayerId]; unit != nil {
+			unit.Action = actions.UnitIdle.String()
+		}
 
 	default:
 		log.Println("UNKNOWN EVENT: ", event)

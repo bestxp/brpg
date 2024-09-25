@@ -1,15 +1,13 @@
 package main
 
 import (
-	"github.com/bestxp/brpg/internal/infra/network"
 	"log"
 	"os"
 
+	game2 "github.com/bestxp/brpg/internal/client/game"
 	"github.com/bestxp/brpg/internal/game"
+	"github.com/bestxp/brpg/internal/infra/network"
 	"github.com/bestxp/brpg/internal/level/levels"
-	"github.com/bestxp/brpg/internal/resources"
-	"github.com/bestxp/brpg/pkg"
-	"github.com/gorilla/websocket"
 	e "github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -19,67 +17,37 @@ type Config struct {
 	height int
 }
 
-var world *game.World
-
-var config *Config
-var frames map[string]resources.Frames
-
-func init() {
-	config = &Config{
-		title:  "Just Dungeon",
+func main() {
+	config := &Config{
+		title:  "Monster Dungeon",
 		width:  1024,
 		height: 768,
 	}
-
-	world = &game.World{
-		IsClient: true,
-		Units:    map[string]*pkg.Unit{},
-	}
-
-	var err error
-	frames, err = resources.LoadResources()
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func main() {
-	levels.All()
-	go world.Evolve()
-	var err error
-
-	host := getEnv("HOST", "localhost")
-	c, _, _ := websocket.DefaultDialer.Dial("ws://"+host+":3000/ws", nil)
-	n := network.NewNetwork(c)
-	game := NewGame(n, world)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	go func(c *websocket.Conn) {
-		defer c.Close()
-
-		for {
-			_, event, err := n.ReadMessage()
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			world.HandleEvent(event)
-
-			if event.Type == pkg.Event_type_connect {
-				game.Camera.InitCoords(world.Me().Pos.X, world.Me().Pos.Y)
-			}
-		}
-	}(c)
-
 	e.SetRunnableOnUnfocused(true)
 	e.SetWindowSize(config.width, config.height)
 	e.SetWindowTitle(config.title)
-	e.SetWindowResizable(true)
+	e.SetWindowResizingMode(e.WindowResizingModeEnabled)
 
-	if err := e.RunGame(game); err != nil {
+	world := game.NewWorld(true)
+	var err error
+
+	levels.All()
+	go world.Evolve()
+
+	host := getEnv("HOST", "localhost")
+
+	n := network.FromHost(host)
+	if n == nil {
+		log.Fatal("Can't connect to remote server")
+		return
+	}
+	gg := game2.NewGame(n, world)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := e.RunGame(gg); err != nil {
 		log.Fatal(err)
 	}
 }

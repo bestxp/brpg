@@ -47,5 +47,5 @@ func (i *Entity) DrawAt(screen *e.Image, x, y float64) {
 }
 
 func (i *Entity) Size() (int, int) {
-	return i.img.Size()
+	return i.img.Bounds().Dx(), i.img.Bounds().Dy()
 }
