@@ -2,6 +2,7 @@ package scene
 
 import (
 	"image/color"
+	"log"
 	"sort"
 
 	"github.com/bestxp/brpg/internal/client/camera"
@@ -23,9 +24,39 @@ type GameScene struct {
 
 	camera *camera.Camera
 	world  *game.World
+
+	keyboards []KeyboardInterface
+}
+
+type KeyboardInterface interface {
+	Handle() error
+}
+
+func NewGameScene(world *game.World, k ...KeyboardInterface) *GameScene {
+	w := &GameScene{
+		events: NewEventStore(),
+		world:  world,
+	}
+
+	w.guiElements = make([]*gui.Icon, 0, 100)
+	for i := 0; i < 10; i++ {
+		w.guiElements = append(w.guiElements, gui.NewIcon())
+	}
+
+	w.players = make([]*gui.Player, 0)
+	w.camera = camera.NewCamera(0, 0)
+	w.keyboards = k
+
+	return w
 }
 
 func (scene *GameScene) Update() {
+	for _, k := range scene.keyboards {
+		if err := k.Handle(); err != nil {
+			log.Println("keyboard", err.Error())
+		}
+	}
+
 	// @todo calc by dx dy of sprite
 	w, h := e.WindowSize()
 
@@ -51,23 +82,6 @@ func (scene *GameScene) Update() {
 
 func (scene *GameScene) Frame(frame int) {
 	scene.frame = frame
-}
-
-func NewGameScene(world *game.World) *GameScene {
-	w := &GameScene{
-		events: NewEventStore(),
-		world:  world,
-	}
-
-	w.guiElements = make([]*gui.Icon, 0, 100)
-	for i := 0; i < 10; i++ {
-		w.guiElements = append(w.guiElements, gui.NewIcon())
-	}
-
-	w.players = make([]*gui.Player, 0)
-	w.camera = camera.NewCamera(0, 0)
-
-	return w
 }
 
 func (scene *GameScene) DrawAt(screen *e.Image) {

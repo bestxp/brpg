@@ -28,7 +28,11 @@ func (b *Button) updateImg() {
 	if !b.Entity.hovered {
 		button.Fill(colornames.Burlywood)
 	} else {
-		button.Fill(colornames.Chocolate)
+		clr := colornames.Burlywood
+		clr.R += 25
+		clr.G += 10
+		clr.B += 25
+		button.Fill(clr)
 	}
 
 	f, err := text.NewGoTextFaceSource(bytes.NewBuffer(brpg.MainFont))
