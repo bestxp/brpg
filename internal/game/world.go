@@ -23,10 +23,12 @@ type World struct {
 }
 
 func NewWorld(client bool) *World {
-	return &World{
+	w := &World{
 		IsClient: client,
 		Units:    make(map[string]*pkg.Unit, 0),
 	}
+
+	return w
 }
 
 func (world *World) Me() *pkg.Unit {
@@ -167,7 +169,6 @@ func (world *World) Evolve() {
 		case <-ticker.C:
 			world.tick++
 			world.tickUnits()
-
 			if world.tick > 60 {
 				world.tick = 0
 			}
