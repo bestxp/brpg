@@ -1,14 +1,14 @@
 package main
 
 import (
-	"github.com/bestxp/brpg/internal/infra/network"
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/bestxp/brpg/internal/game"
+	"github.com/bestxp/brpg/internal/infra/network"
 	engine "github.com/bestxp/brpg/pkg"
 	"github.com/gorilla/websocket"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -123,7 +123,7 @@ func (c *Client) writePump() {
 func serveWs(hub *Hub, world *game.World, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println(err)
+		log.Error().Err(err)
 		return
 	}
 	net := network.NewNetwork(conn)
@@ -144,7 +144,7 @@ func serveWs(hub *Hub, world *game.World, w http.ResponseWriter, r *http.Request
 	err = net.Send(event)
 	if err != nil {
 		//todo: remove unit
-		log.Println(err)
+		log.Error().Err(err)
 	}
 
 	unit := world.Units[id]

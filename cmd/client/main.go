@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"os"
 
 	game2 "github.com/bestxp/brpg/internal/client/game"
@@ -9,6 +8,7 @@ import (
 	"github.com/bestxp/brpg/internal/infra/network"
 	"github.com/bestxp/brpg/internal/level/levels"
 	e "github.com/hajimehoshi/ebiten/v2"
+	"github.com/rs/zerolog/log"
 )
 
 type Config struct {
@@ -38,17 +38,17 @@ func main() {
 
 	n := network.FromHost(host)
 	if n == nil {
-		log.Fatal("Can't connect to remote server")
+		log.Fatal().Msg("Can't connect to remote server")
 		return
 	}
 	gg := game2.NewGame(n, world)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err)
 	}
 
 	if err := e.RunGame(gg); err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err)
 	}
 }
 
