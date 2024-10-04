@@ -1,10 +1,9 @@
 package gui
 
 import (
-	"image"
-	"log"
-
 	e "github.com/hajimehoshi/ebiten/v2"
+	"github.com/rs/zerolog/log"
+	"image"
 )
 
 type Entity struct {
@@ -28,7 +27,7 @@ func (i *Entity) TryHover(x int, y int) bool {
 }
 
 func (i *Entity) HandleClick(button e.MouseButton) {
-	log.Println("mouse ", button)
+	log.Debug().Msgf("mouse ", button)
 }
 
 func (i *Entity) DrawAt(screen *e.Image, x, y float64) {

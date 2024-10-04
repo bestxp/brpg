@@ -1,14 +1,14 @@
 package game
 
 import (
-	"github.com/bestxp/brpg/internal/level"
-	"github.com/bestxp/brpg/internal/level/levels"
-	"log"
 	"math/rand"
 	"time"
 
 	"github.com/bestxp/brpg/internal/actions"
+	"github.com/bestxp/brpg/internal/level"
+	"github.com/bestxp/brpg/internal/level/levels"
 	"github.com/bestxp/brpg/pkg"
+	"github.com/rs/zerolog/log"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -72,7 +72,7 @@ func (world *World) AddPlayer() string {
 }
 
 func (world *World) HandleEvent(event *pkg.Event) {
-	log.Println(event.GetType())
+	log.Debug().Msg(event.GetType().String())
 
 	switch event.GetType() {
 	case pkg.Event_type_connect:
@@ -107,7 +107,7 @@ func (world *World) HandleEvent(event *pkg.Event) {
 		}
 
 	default:
-		log.Println("UNKNOWN EVENT: ", event)
+		log.Error().Msgf("UNKNOWN EVENT: ", event)
 	}
 }
 
@@ -140,12 +140,12 @@ func (world *World) tickUnits() {
 			case pkg.Direction_down:
 				posTo.Y += unit.Speed
 			default:
-				log.Println("UNKNOWN DIRECTION: ", unit.Direction)
+				log.Error().Msgf("UNKNOWN DIRECTION: ", unit.Direction)
 			}
 
 			lvl, err := levels.LevelName(unit.Pos.Level).Level()
 			if err != nil {
-				log.Println("UNKNOWN level")
+				log.Debug().Msg("UNKNOWN level")
 				return
 			}
 
