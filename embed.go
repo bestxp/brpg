@@ -2,11 +2,12 @@ package brpg
 
 import (
 	"embed"
-	"fmt"
 	"io/fs"
+
+	"github.com/rs/zerolog/log"
 )
 
-//go:embed resources/*
+//go:embed resources
 var f embed.FS
 
 //go:embed resources/font/AncientModernTales-a7Po.ttf
@@ -17,7 +18,7 @@ func init() {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("path=%q, isDir=%v\n", path, d.IsDir())
+		log.Debug().Msgf("path=%q, isDir=%v\n", path, d.IsDir())
 		return nil
 	})
 }

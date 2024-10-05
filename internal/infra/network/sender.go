@@ -3,11 +3,11 @@ package network
 import (
 	"fmt"
 	"io"
-	"log"
 	"time"
 
 	"github.com/bestxp/brpg/pkg"
 	"github.com/gorilla/websocket"
+	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -46,7 +46,7 @@ func FromHost(host string) *Network {
 		c, _, err := websocket.DefaultDialer.Dial("ws://"+host+":3000/ws", nil)
 		if err != nil {
 			time.Sleep(time.Second * time.Duration(i))
-			log.Println("Connection timeout, retry", err.Error())
+			log.Debug().Msgf("Connection timeout, retry", err.Error())
 		} else {
 			return NewNetwork(c)
 		}
@@ -84,7 +84,7 @@ func (n *Network) ReadMessage() (int, *pkg.Event, error) {
 	var event pkg.Event
 	err = proto.Unmarshal(message, &event)
 	if err != nil {
-		log.Println(err)
+		log.Error().Err(err)
 	}
 	return in, &event, nil
 }
