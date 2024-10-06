@@ -2,7 +2,6 @@ package game
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/bestxp/brpg/internal/client/camera"
 	"github.com/bestxp/brpg/internal/client/gui"
@@ -17,6 +16,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/audio/mp3"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/rs/zerolog/log"
 )
 
 // Game implements ebiten.Game interface.
@@ -45,7 +45,7 @@ func (g *Game) Run(afterConnectFn func()) {
 		for {
 			_, event, err := c.ReadMessage()
 			if err != nil {
-				log.Fatal(err)
+				log.Fatal().Err(err)
 			}
 			if event.Type == pkg.Event_type_connect {
 				g.Camera.InitCoords(g.world.Me().Pos.X, g.world.Me().Pos.Y)
@@ -146,6 +146,7 @@ func (g *Game) UnitInfo() string {
 // Layout takes the outside size (e.g., the window size) and returns the (logical) screen size.
 // If you don't have to adjust the screen size with the outside size, just return a fixed size.
 func (g *Game) Layout(_, _ int) (screenWidth, screenHeight int) {
+
 	return e.WindowSize()
 }
 
