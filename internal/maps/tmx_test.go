@@ -10,8 +10,9 @@ import (
 const baseMap = "resources/Tiled/Tilemaps/Beginning Fields.tmx"
 
 func TestMapLoader(t *testing.T) {
-	loader := FromFs(brpg.FS())
+	ff := brpg.FS()
 
+	loader := FromFs(ff)
 	m, err := loader.Load(baseMap)
 	assert.NotNilf(t, m, "map not parced")
 	assert.NoErrorf(t, err, "file exists")

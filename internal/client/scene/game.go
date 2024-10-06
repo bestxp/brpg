@@ -2,15 +2,14 @@ package scene
 
 import (
 	"image/color"
-	"log"
 	"sort"
 
 	"github.com/bestxp/brpg/internal/client/camera"
 	"github.com/bestxp/brpg/internal/client/gui"
 	"github.com/bestxp/brpg/internal/game"
-
 	e "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/rs/zerolog/log"
 )
 
 var _ Scene = &GameScene{}
@@ -54,7 +53,7 @@ func (scene *GameScene) Update() {
 	lenKey := len(scene.keyboards)
 	for i := 0; i < lenKey; i++ {
 		if err := scene.keyboards[i].Handle(); err != nil {
-			log.Println("keyboard", err.Error())
+			log.Debug().Msgf("keyboard %v", err.Error())
 		}
 	}
 

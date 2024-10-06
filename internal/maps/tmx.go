@@ -1,30 +1,30 @@
 package maps
 
 import (
+	"embed"
+	"image"
 	_ "image/gif"
 	_ "image/png"
+	"path"
 
 	"encoding/xml"
 	"fmt"
-	"io/fs"
-	"path/filepath"
 	"strings"
-
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
 type MapLoader struct {
-	fs fs.FS
+	fs embed.FS
 }
 
-func FromFs(fs fs.FS) *MapLoader {
+func FromFs(fs embed.FS) *MapLoader {
 	return &MapLoader{
 		fs: fs,
 	}
 }
 
 func (f *MapLoader) Load(file string) (*Map, error) {
-	dirname := filepath.Dir(file)
+	file = path.Clean(file)
+	dirname := path.Dir(file)
 	fi, err := f.fs.Open(file)
 	if err != nil {
 		return nil, fmt.Errorf("read map: %w", err)
@@ -33,16 +33,16 @@ func (f *MapLoader) Load(file string) (*Map, error) {
 
 	reader := xml.NewDecoder(fi)
 
-	var m Map
+	var m TiledMap
 	if err = reader.Decode(&m); err != nil {
 		return nil, fmt.Errorf("decode map: %w", err)
 	}
 
 	for idx, tset := range m.Tileset {
 		if !strings.HasPrefix(tset.Source, "/") {
-			tset.Source = fmt.Sprintf("%s/%s", dirname, tset.Source)
+			tset.Source = path.Join(dirname, tset.Source)
 		}
-		tset.Source = filepath.Clean(tset.Source)
+		tset.Source = path.Clean(tset.Source)
 		tileFi, err := f.fs.Open(tset.Source)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", tset.Source, err)
@@ -74,20 +74,24 @@ func (f *MapLoader) Load(file string) (*Map, error) {
 		m.Tileset[idx] = tset
 	}
 
-	return &m, nil
+	return NewMap(m), nil
 }
-func (f *MapLoader) loadImage(path, imagePath string) (*TilesetDataImageImage, error) {
+func (f *MapLoader) loadImage(fpath, imagePath string) (*TilesetDataImageImage, error) {
 	if !strings.HasPrefix(imagePath, "/") {
-		imagePath = fmt.Sprintf("%s/%s", path, imagePath)
+		imagePath = path.Join(fpath, imagePath)
 	}
-	imagePath = filepath.Clean(imagePath)
-	var (
-		err    error
-		tImage = &TilesetDataImageImage{}
-	)
+	tImage := &TilesetDataImageImage{}
 
-	if tImage.EImage, tImage.Img, err = ebitenutil.NewImageFromFileSystem(f.fs, imagePath); err != nil {
-		return nil, fmt.Errorf("failed load image %s: %w", imagePath, err)
+	file, err := f.fs.Open(path.Clean(imagePath))
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = file.Close()
+	}()
+	tImage.Img, _, err = image.Decode(file)
+	if err != nil {
+		return nil, err
 	}
 
 	return tImage, nil

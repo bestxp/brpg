@@ -1,8 +1,9 @@
 package level
 
 import (
-	"github.com/go-playground/assert/v2"
 	"testing"
+
+	"github.com/go-playground/assert/v2"
 )
 
 func TestLevel_WalcCalc(t *testing.T) {
@@ -28,5 +29,5 @@ func TestLevel_WalcCalc(t *testing.T) {
 		To:   Pos{140, 1},
 	}
 	posTo := base.WalkCalc(v)
-	assert.Equal(t, posTo, v.To)
+	assert.Equal(t, posTo, v.From)
 }

@@ -7,7 +7,11 @@ gen-events:
 
 
 run-client:
-	go run cmd/client/*.go
+	go run cmd/client/*.go --tags=client
 
 run-server:
-	go run cmd/server/*.go
+	go run cmd/server/*.go 
+
+install-deps:
+	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest	

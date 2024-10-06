@@ -3,11 +3,11 @@ package gui
 import (
 	"bytes"
 	"image"
-	"log"
 
 	"github.com/bestxp/brpg"
 	e "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/image/colornames"
 	"golang.org/x/text/language"
 )
@@ -37,7 +37,7 @@ func (b *Button) updateImg() {
 
 	f, err := text.NewGoTextFaceSource(bytes.NewBuffer(brpg.MainFont))
 	if err != nil {
-		log.Println(err)
+		log.Error().Err(err)
 	}
 
 	font := &text.GoTextFace{

@@ -2,7 +2,6 @@ package maps
 
 import (
 	"encoding/xml"
-	e "github.com/hajimehoshi/ebiten/v2"
 	"image"
 )
 
@@ -47,17 +46,17 @@ type ObjectGroup struct {
 	Object []Object `xml:"object" json:"object,omitempty"`
 }
 
-type Map struct {
+type TiledMap struct {
 	XMLName      xml.Name    `xml:"map" json:"map,omitempty"`
 	Text         string      `xml:",chardata" json:"text,omitempty"`
 	Version      string      `xml:"version,attr" json:"version,omitempty"`
 	Tiledversion string      `xml:"tiledversion,attr" json:"tiledversion,omitempty"`
 	Orientation  string      `xml:"orientation,attr" json:"orientation,omitempty"`
 	Renderorder  string      `xml:"renderorder,attr" json:"renderorder,omitempty"`
-	Width        string      `xml:"width,attr" json:"width,omitempty"`
-	Height       string      `xml:"height,attr" json:"height,omitempty"`
-	Tilewidth    string      `xml:"tilewidth,attr" json:"tilewidth,omitempty"`
-	Tileheight   string      `xml:"tileheight,attr" json:"tileheight,omitempty"`
+	Width        int         `xml:"width,attr" json:"width,omitempty"`
+	Height       int         `xml:"height,attr" json:"height,omitempty"`
+	Tilewidth    int         `xml:"tilewidth,attr" json:"tilewidth,omitempty"`
+	Tileheight   int         `xml:"tileheight,attr" json:"tileheight,omitempty"`
 	Infinite     string      `xml:"infinite,attr" json:"infinite,omitempty"`
 	Nextlayerid  string      `xml:"nextlayerid,attr" json:"nextlayerid,omitempty"`
 	Nextobjectid string      `xml:"nextobjectid,attr" json:"nextobjectid,omitempty"`
@@ -85,8 +84,7 @@ type Tile struct {
 }
 
 type TilesetDataImageImage struct {
-	Img    image.Image
-	EImage *e.Image
+	Img image.Image
 }
 
 type TilesetImage struct {
