@@ -1,3 +1,7 @@
+## установка зависимостей
+
+[ebitenengine doc](https://github.com/hajimehoshi/ebiten?tab=readme-ov-file#platforms)
+
 ## Запустить сервер
 
 ```
