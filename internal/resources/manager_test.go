@@ -12,8 +12,8 @@ func TestManager_Load(t *testing.T) {
 	fs := brpg.FS()
 
 	manager := FromFS(fs, false)
-	textures, err := manager.Load("gui")
+	textures, err := manager.Load("sprites")
 
 	assert.Equal(t, nil, err)
-	assert.Equal(t, len(textures.Images), 2)
+	assert.Equal(t, len(textures.Images), 8)
 }

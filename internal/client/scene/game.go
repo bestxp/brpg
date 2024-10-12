@@ -27,6 +27,8 @@ type GameScene struct {
 	world  *game.World
 
 	keyboards []KeyboardInterface
+
+	playersTextures *resources.Textures
 }
 
 type KeyboardInterface interface {
@@ -40,6 +42,12 @@ func NewGameScene(world *game.World, k ...KeyboardInterface) *GameScene {
 	}
 
 	gg := resources.FromFS(brpg.FS(), !world.IsClient)
+	var err error
+
+	w.playersTextures, err = gg.Load("sprites")
+	if err != nil {
+		log.Error().Err(err).Msg("load sprites")
+	}
 
 	txt, err := gg.Load("gui")
 	if err != nil {
@@ -58,7 +66,7 @@ func NewGameScene(world *game.World, k ...KeyboardInterface) *GameScene {
 				if img == nil {
 					log.Error().Msg("nil img")
 				}
-				w.guiElements = append(w.guiElements, gui.NewIcon(img))
+				w.guiElements = append(w.guiElements, gui.NewIcon(img.Image()))
 			}
 		} else {
 			log.Error().Msg("No gui elements")
@@ -103,7 +111,7 @@ func (scene *GameScene) Update() {
 		if unit.Pos.Level != scene.world.Me().Pos.Level {
 			continue
 		}
-		scene.players = append(scene.players, gui.NewPlayerFromServer(unit))
+		scene.players = append(scene.players, gui.NewPlayerFromServer(unit, scene.playersTextures))
 	}
 }
 

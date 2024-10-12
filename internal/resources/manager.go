@@ -5,11 +5,12 @@ import (
 	"image"
 	"io/fs"
 	"path"
+	"strconv"
+	"strings"
 
 	_ "image/png"
 
 	types "github.com/bestxp/brpg/internal/resources/yaml"
-	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 )
 
@@ -55,7 +56,7 @@ func (m *Manager) Load(texture string) (*Textures, error) {
 func (m *Manager) Collect(t types.Texture) (*Textures, error) {
 	texture := &Textures{}
 
-	images := make(map[string]*Image, len(t.Images))
+	texture.Images = make(map[string]*Image, len(t.Images))
 	for _, i := range t.Images {
 		img, err := m.imageFromSource(i.Source)
 		if err != nil {
@@ -64,10 +65,60 @@ func (m *Manager) Collect(t types.Texture) (*Textures, error) {
 		if i.Tiles != nil {
 			img.SetTileInfo(i.Tiles.Tile.W, i.Tiles.Tile.H, i.Tiles.Cols, i.Tiles.Rows)
 		}
-		images[i.Name] = img
+		texture.Images[i.Name] = img
 	}
 
-	texture.Images = images
+	texture.Animatons = make(map[string]*Animation, len(t.Animations))
+
+	for _, a := range t.Animations {
+		frames := make([]*Image, 0, len(a.Frames))
+		for _, fr := range a.Frames {
+			inf, err := m.parseLink(fr)
+			if err != nil {
+				return nil, fmt.Errorf("%s: %w", a.Name, err)
+			}
+			if inf.Section != "images" {
+				continue
+			}
+			i := texture.Images[inf.Name]
+			if inf.Tiled && i.IsTiled() {
+				if i, err = i.Tile(int(inf.Row), int(inf.Col)); err != nil {
+					return nil, fmt.Errorf("tiled %s: %w", a.Name, err)
+				}
+			}
+			frames = append(frames, i)
+		}
+		texture.Animatons[a.Name] = NewAnimation(frames, uint16(a.Duration), WithFlip(a.Flip), WithLoop(a.Loop))
+	}
+
+	texture.Entities = make(map[string]*Entity, len(t.Entities))
+
+	for _, e := range t.Entities {
+		ent := NewEntity(uint16(e.Size.W), uint16(e.Size.H))
+
+		for _, a := range e.Actions {
+			inf, err := m.parseLink(a.Sprite)
+			if err != nil {
+				return nil, fmt.Errorf("failed load sprite entity %s, %s: %w", e.Name, a.Name, err)
+			}
+			var act SpriteFramed
+			if inf.Section == "image" {
+				if texture.Images[inf.Name].IsTiled() && inf.Tiled {
+					if act, err = texture.Images[inf.Name].Tile(int(inf.Row), int(inf.Col)); err != nil {
+						return nil, fmt.Errorf("failed get sprite entity tile %s, %s: %w", e.Name, a.Name, err)
+					}
+				} else {
+					act = texture.Images[inf.Name]
+				}
+			}
+			if inf.Section == "animations" {
+				act = texture.Animatons[inf.Name]
+			}
+			ent.Actions[a.Name] = act
+		}
+
+		texture.Entities[e.Name] = ent
+	}
 
 	return texture, nil
 }
@@ -90,66 +141,67 @@ func (m *Manager) imageFromSource(fpath string) (*Image, error) {
 	return nil, fmt.Errorf("unknown type for %s (%s)", file, tt)
 }
 
-type Textures struct {
-	Images map[string]*Image
-}
-
-func NewImage(i *image.NRGBA) *Image {
-	return &Image{image: i, size: [2]uint16{uint16(i.Bounds().Dx()), uint16(i.Bounds().Dy())}}
-}
-
-type Image struct {
-	image *image.NRGBA
-	size  [2]uint16
-
-	tiles Tiles
-}
-
-func (i *Image) Tile(row, col int) (*image.NRGBA, error) {
-	if i.IsTiled() {
-		return i.tiles[row][col], nil
+func (m *Manager) parseLink(source string) (*imageInfo, error) {
+	if !strings.HasPrefix(source, "#") {
+		return nil, nil
 	}
-	return nil, fmt.Errorf("no tiled resource")
-}
+	source = strings.TrimPrefix(source, "#")
+	parts := strings.Split(source, ".")
 
-type Tiles map[int]map[int]*image.NRGBA
+	inf := &imageInfo{}
 
-func (i *Image) Width() int {
-	return int(i.size[0])
-}
+	inf.Section = parts[0]
+	inf.Name = parts[1]
 
-func (i *Image) Heigth() int {
-	return int(i.size[1])
-}
+	var row, col int
+	var err error
+	if strings.Contains(inf.Name, "[") {
+		inf.Tiled = true
+		index := strings.Index(inf.Name, "[")
+		tile := inf.Name[index+1 : len(inf.Name)-1]
+		inf.Name = inf.Name[:index]
 
-func (i *Image) IsTiled() bool {
-	return len(i.tiles) > 0
-}
-
-func (i *Image) TilesRows() int {
-	return len(i.tiles)
-}
-
-func (i *Image) TilesCount() int {
-	if !i.IsTiled() {
-		return 0
-	}
-	return len(i.tiles[0])
-}
-
-func (i *Image) SetTileInfo(w, h, cols, rows int) {
-	i.tiles = make(Tiles, cols)
-	if i.image == nil {
-		log.Debug().Msgf("no image loaded")
-		return
-	}
-
-	for j := 1; j <= rows; j++ {
-		i.tiles[j] = make(map[int]*image.NRGBA, cols)
-		for col := 1; col <= cols; col++ {
-			rect := image.Rect(w*(col-1), h*(j-1), col*w, h*j)
-			log.Debug().Str("rect", rect.String()).Msg("sub rect")
-			i.tiles[j][col] = i.image.SubImage(rect).(*image.NRGBA)
+		tileCoors := strings.Split(tile, ",")
+		if row, err = strconv.Atoi(tileCoors[0]); err != nil {
+			return nil, fmt.Errorf("failed parce row %s: %w", tileCoors[0], err)
 		}
+		if col, err = strconv.Atoi(tileCoors[1]); err != nil {
+			return nil, fmt.Errorf("failed parce cols %s: %w", tileCoors[1], err)
+		}
+		inf.Row = uint16(row)
+		inf.Col = uint16(col)
 	}
+
+	return inf, nil
+}
+
+type imageInfo struct {
+	Section, Name string
+	Tiled         bool
+	Col, Row      uint16
+}
+
+type Textures struct {
+	Images    map[string]*Image
+	Animatons map[string]*Animation
+	Entities  map[string]*Entity
+}
+
+type Entity struct {
+	W, H    uint16
+	Actions map[string]SpriteFramed
+}
+
+type SpriteFramed interface {
+	Frames() []*Image
+}
+
+func NewEntity(w, h uint16) *Entity {
+	e := &Entity{
+		W:       w,
+		H:       h,
+		Actions: map[string]SpriteFramed{},
+	}
+
+	return e
 }
