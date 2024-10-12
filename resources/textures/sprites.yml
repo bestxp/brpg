@@ -1,4 +1,4 @@
-models:
+entity:
   - name: demon
     size: {w: 32, h: 36}
     actions: 
@@ -13,40 +13,45 @@ models:
 
 animations:
   - name: demon_walk_left
-    frames: [1,2,3,4]
+    frames: ["#images.big_demon_run_anim_f0[1,1]","#images.big_demon_run_anim_f1","#images.big_demon_run_anim_f2","#images.big_demon_run_anim_f3"]
     duration: 10 #ticks
+    loop: true
   - name: demon_walk_right
-    frames: [1,2,3,4]
+    frames: ["#images.big_demon_run_anim_f0[1,1]","#images.big_demon_run_anim_f1","#images.big_demon_run_anim_f2","#images.big_demon_run_anim_f3"]
     flip: horizontal
     duration: 10
+    loop: true
   - name: demon_walk_up
-    frames: [1,2,3,4]
+    frames: ["#images.big_demon_run_anim_f0[1,1]","#images.big_demon_run_anim_f1","#images.big_demon_run_anim_f2","#images.big_demon_run_anim_f3"]
     duration: 10
+    loop: true
   - name: demon_walk_down
-    frames: [1,2,3,4]
+    frames: ["#images.big_demon_run_anim_f0[1,1]","#images.big_demon_run_anim_f1","#images.big_demon_run_anim_f2","#images.big_demon_run_anim_f3"]
     duration: 10
+    loop: true
   - name: demon_idle
-    frames: [5,6,7,8]
-    duration: 10    
+    frames: ["#images.big_demon_idle_anim_f0[1,1]","#images.big_demon_idle_anim_f1","#images.big_demon_idle_anim_f2","#images.big_demon_idle_anim_f3"]
+    duration: 10
+    loop: true    
 
 images:
-  - id: 1
+  - name: big_demon_run_anim_f0
     source: ../sprites/big_demon_run_anim_f0.png 
-    tiles: 1
-    tile: {w: 32, h: 36}
-    cols: 1
-    rows: 1
-  - id: 2
+    tiles: 
+      tile: {w: 32, h: 36}
+      cols: 1
+      rows: 1
+  - name: big_demon_run_anim_f1
     source: ../sprites/big_demon_run_anim_f1.png
-  - id: 3
+  - name: big_demon_run_anim_f2
     source:  ../sprites/big_demon_run_anim_f2.png
-  - id: 4
+  - name: big_demon_run_anim_f3
     source: ../sprites/big_demon_run_anim_f3.png
-  - id: 5
+  - name: big_demon_idle_anim_f0
     source: ../sprites/big_demon_idle_anim_f0.png 
-  - id: 6
+  - name: big_demon_idle_anim_f1
     source: ../sprites/big_demon_idle_anim_f1.png
-  - id: 7
+  - name: big_demon_idle_anim_f2
     source:  ../sprites/big_demon_idle_anim_f2.png
-  - id: 8
+  - name: big_demon_idle_anim_f3
     source: ../sprites/big_demon_idle_anim_f3.png

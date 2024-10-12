@@ -1,0 +1,18 @@
+entity:
+  - name: character
+    size: {w: 32, h: 32}
+    actions: 
+    - name: idle
+      sprite: '#images.character-icon'
+
+animations:
+
+images:
+  - name: character-icon
+    source: ../gui/Character-ICON.png
+  - name: tiled-icons
+    source: ../gui/icons.png
+    tiles: 
+      tile: {w: 32, h: 32}
+      cols: 16
+      rows: 22
