@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 
+	"github.com/bestxp/brpg/internal/resources/yaml"
 	"github.com/disintegration/imaging"
 	"github.com/rs/zerolog/log"
 )
@@ -103,14 +104,14 @@ func NewAnimation(frames []*Image, duration uint16, opts ...AnimationOpt) *Anima
 
 type AnimationOpt func(a *Animation)
 
-func WithFlip(flip string) func(a *Animation) {
+func WithFlip(flip yaml.Flip) func(a *Animation) {
 	return func(a *Animation) {
 		for idx := range a.frames {
 			frame := a.frames[idx].Copy()
-			if flip == "horizontal" {
+			if flip == yaml.HorizontalFlip {
 				frame.image = imaging.FlipH(a.frames[idx].image)
 			}
-			if flip == "vertical" {
+			if flip == yaml.VerticalFlip {
 				frame.image = imaging.FlipV(a.frames[idx].image)
 			}
 			a.frames[idx] = frame

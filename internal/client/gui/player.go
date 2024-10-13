@@ -69,8 +69,6 @@ func (p *Player) updateImg() {
 		skin := e.NewImageFromImage(frames[(p.frame/7)%len(frames)].Image())
 		p.img.DrawImage(skin, op)
 
-		log.Debug().Msg(action)
-
 		var (
 			percentBarWidth   = int(p.texture.W - 6)
 			percentBarHeight  = 4

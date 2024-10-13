@@ -44,7 +44,7 @@ func NewGameScene(world *game.World, k ...KeyboardInterface) *GameScene {
 	gg := resources.FromFS(brpg.FS(), !world.IsClient)
 	var err error
 
-	w.playersTextures, err = gg.Load("sprites")
+	w.playersTextures, err = gg.Load("characters")
 	if err != nil {
 		log.Error().Err(err).Msg("load sprites")
 	}

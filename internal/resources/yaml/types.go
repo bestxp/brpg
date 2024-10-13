@@ -31,8 +31,15 @@ type Animation struct {
 	Frames   []string `yaml:"frames"` // array of path to image or image
 	Duration int      `yaml:"duration"`
 	Loop     bool     `yaml:"loop"`
-	Flip     string   `yaml:"flip,omitempty"`
+	Flip     Flip     `yaml:"flip,omitempty"`
 }
+
+type Flip string
+
+const (
+	HorizontalFlip Flip = "horizontal"
+	VerticalFlip   Flip = "vertical"
+)
 
 type Image struct {
 	Name   string      `yaml:"name"`
