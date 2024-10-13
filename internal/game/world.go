@@ -42,7 +42,7 @@ func (world *World) ActiveClientWorld() *level.Level {
 }
 
 func (world *World) AddPlayer() string {
-	skins := []string{"big_demon", "big_zombie"}
+	skins := []string{"demon"}
 	id := uuid.NewV4().String()
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 	level, err := levels.Lobby.Level()

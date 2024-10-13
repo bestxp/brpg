@@ -1,10 +1,12 @@
 package gui
 
 import (
+	"image/color"
+
 	"github.com/bestxp/brpg/internal/resources"
 	"github.com/bestxp/brpg/pkg"
 	e "github.com/hajimehoshi/ebiten/v2"
-	"image/color"
+	"github.com/rs/zerolog/log"
 )
 
 var frames map[string]resources.Frames
@@ -25,35 +27,50 @@ type Player struct {
 	Dx, Dy float64
 
 	unit *pkg.Unit
-	skin resources.Frames
+
+	texture *resources.Entity
 }
 
-func NewPlayerFromServer(unit *pkg.Unit) *Player {
+func NewPlayerFromServer(unit *pkg.Unit, e *resources.Textures) *Player {
 	p := &Player{
 		Entity: &Entity{},
 	}
 	p.X = unit.Pos.X
 	p.Y = unit.Pos.Y
 	p.unit = unit
-	p.skin = frames[unit.Skin+"_"+unit.Action]
 
+	p.texture = e.Entities[unit.Skin]
+	if p.texture == nil {
+		log.Debug().Msg("skin not loaded")
+	}
 	return p
 }
 
 func (p *Player) updateImg() {
-	if p.Entity.img == nil {
-		p.Entity.img = e.NewImage(p.skin.Config.Width, p.skin.Config.Height)
+	if p.img == nil {
+		p.img = e.NewImage(int(p.texture.W), int(p.texture.H))
 
 		op := &e.DrawImageOptions{}
-		if p.unit.Direction == pkg.Direction_left {
-			op.GeoM.Scale(-1, 1)
-			op.GeoM.Translate(float64(p.skin.Config.Width), 0)
+
+		var action = "idle"
+		if p.unit.Action == "run" {
+			switch p.unit.Direction {
+			case pkg.Direction_down:
+				action = "walk_down"
+			case pkg.Direction_left:
+				action = "walk_left"
+			case pkg.Direction_right:
+				action = "walk_right"
+			}
 		}
-		skin := e.NewImageFromImage(p.skin.Frames[(p.frame/7+int(p.unit.Frame))%4])
-		p.Entity.img.DrawImage(skin, op)
+
+		frames := p.texture.Actions[action].Frames()
+
+		skin := e.NewImageFromImage(frames[(p.frame/7)%len(frames)].Image())
+		p.img.DrawImage(skin, op)
 
 		var (
-			percentBarWidth   = p.skin.Config.Width - 6
+			percentBarWidth   = int(p.texture.W - 6)
 			percentBarHeight  = 4
 			percentBarPadding = 1
 		)
@@ -73,8 +90,8 @@ func (p *Player) updateImg() {
 		healthBar.DrawImage(currHealth, currHealthOp)
 
 		hbOpt := &e.DrawImageOptions{}
-		hbOpt.GeoM.Translate(float64(p.skin.Config.Width-percentBarWidth)/2, 0)
-		p.Entity.img.DrawImage(healthBar, hbOpt)
+		hbOpt.GeoM.Translate(float64(int(p.texture.W)-percentBarWidth)/2, 0)
+		p.img.DrawImage(healthBar, hbOpt)
 	}
 }
 

@@ -1,18 +1,24 @@
 package gui
 
 import (
-	e "github.com/hajimehoshi/ebiten/v2"
+	"image"
 	"image/color"
+
+	e "github.com/hajimehoshi/ebiten/v2"
 )
 
 type Icon struct {
 	*Entity
+	icon *e.Image
 }
 
-func NewIcon() *Icon {
+func NewIcon(img image.Image) *Icon {
 	i := &Icon{Entity: &Entity{
 		img: nil,
 	}}
+	if img != nil {
+		i.icon = e.NewImageFromImage(img)
+	}
 	i.updateIcon()
 	return i
 }
@@ -31,6 +37,8 @@ func (i *Icon) updateIcon() *e.Image {
 			A: 255,
 		})
 	}
+
+	i.img.DrawImage(i.icon, &e.DrawImageOptions{})
 
 	return i.img
 }

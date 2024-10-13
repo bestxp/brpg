@@ -4,9 +4,11 @@ import (
 	"image/color"
 	"sort"
 
+	"github.com/bestxp/brpg"
 	"github.com/bestxp/brpg/internal/client/camera"
 	"github.com/bestxp/brpg/internal/client/gui"
 	"github.com/bestxp/brpg/internal/game"
+	"github.com/bestxp/brpg/internal/resources"
 	e "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/rs/zerolog/log"
@@ -25,6 +27,8 @@ type GameScene struct {
 	world  *game.World
 
 	keyboards []KeyboardInterface
+
+	playersTextures *resources.Textures
 }
 
 type KeyboardInterface interface {
@@ -37,9 +41,36 @@ func NewGameScene(world *game.World, k ...KeyboardInterface) *GameScene {
 		world:  world,
 	}
 
-	w.guiElements = make([]*gui.Icon, 0, 100)
-	for i := 0; i < 10; i++ {
-		w.guiElements = append(w.guiElements, gui.NewIcon())
+	gg := resources.FromFS(brpg.FS(), !world.IsClient)
+	var err error
+
+	w.playersTextures, err = gg.Load("characters")
+	if err != nil {
+		log.Error().Err(err).Msg("load sprites")
+	}
+
+	txt, err := gg.Load("gui")
+	if err != nil {
+		log.Error().Err(err)
+	}
+	if txt != nil {
+		icons := txt.Images["tiled-icons"]
+		if icons != nil && icons.IsTiled() {
+			w.guiElements = make([]*gui.Icon, 0, 100)
+			for i := 0; i < 10; i++ {
+				img, err := icons.Tile(5, i+1)
+				if err != nil {
+					log.Error().Err(err)
+					continue
+				}
+				if img == nil {
+					log.Error().Msg("nil img")
+				}
+				w.guiElements = append(w.guiElements, gui.NewIcon(img.Image()))
+			}
+		} else {
+			log.Error().Msg("No gui elements")
+		}
 	}
 
 	w.players = make([]*gui.Player, 0)
@@ -80,7 +111,7 @@ func (scene *GameScene) Update() {
 		if unit.Pos.Level != scene.world.Me().Pos.Level {
 			continue
 		}
-		scene.players = append(scene.players, gui.NewPlayerFromServer(unit))
+		scene.players = append(scene.players, gui.NewPlayerFromServer(unit, scene.playersTextures))
 	}
 }
 

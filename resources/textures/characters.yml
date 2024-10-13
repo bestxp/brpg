@@ -1,0 +1,59 @@
+entity:
+  - name: demon
+    size: {w: 32, h: 36}
+    actions: 
+    - name: walk_up
+      sprite: '#animations.demon_walk_up'
+    - name: walk_right
+      sprite: '#animations.demon_walk_right'
+    - name: walk_left
+      sprite: '#animations.demon_walk_left'
+    - name: walk_down
+      sprite: '#animations.demon_walk_down'
+    - name: idle
+      sprite: '#animations.demon_idle'
+
+animations:
+  - name: demon_walk_left
+    frames: ["#images.big_demon_run_anim_f0[1,1]","#images.big_demon_run_anim_f1","#images.big_demon_run_anim_f2","#images.big_demon_run_anim_f3"]
+    duration: 10 #ticks
+    loop: true
+    flip: horizontal
+  - name: demon_walk_right
+    frames: ["#images.big_demon_run_anim_f0[1,1]","#images.big_demon_run_anim_f1","#images.big_demon_run_anim_f2","#images.big_demon_run_anim_f3"]
+    duration: 10
+    loop: true
+  - name: demon_walk_up
+    frames: ["#images.big_demon_run_anim_f0[1,1]","#images.big_demon_run_anim_f1","#images.big_demon_run_anim_f2","#images.big_demon_run_anim_f3"]
+    duration: 10
+    loop: true
+  - name: demon_walk_down
+    frames: ["#images.big_demon_run_anim_f0[1,1]","#images.big_demon_run_anim_f1","#images.big_demon_run_anim_f2","#images.big_demon_run_anim_f3"]
+    duration: 10
+    loop: true
+  - name: demon_idle
+    frames: ["#images.big_demon_idle_anim_f0[1,1]","#images.big_demon_idle_anim_f1","#images.big_demon_idle_anim_f2","#images.big_demon_idle_anim_f3"]
+    duration: 10
+    loop: true    
+
+images:
+  - name: big_demon_run_anim_f0
+    source: ../sprites/big_demon_run_anim_f0.png 
+    tiles: 
+      tile: {w: 32, h: 36}
+      cols: 1
+      rows: 1
+  - name: big_demon_run_anim_f1
+    source: ../sprites/big_demon_run_anim_f1.png
+  - name: big_demon_run_anim_f2
+    source:  ../sprites/big_demon_run_anim_f2.png
+  - name: big_demon_run_anim_f3
+    source: ../sprites/big_demon_run_anim_f3.png
+  - name: big_demon_idle_anim_f0
+    source: ../sprites/big_demon_idle_anim_f0.png 
+  - name: big_demon_idle_anim_f1
+    source: ../sprites/big_demon_idle_anim_f1.png
+  - name: big_demon_idle_anim_f2
+    source:  ../sprites/big_demon_idle_anim_f2.png
+  - name: big_demon_idle_anim_f3
+    source: ../sprites/big_demon_idle_anim_f3.png
